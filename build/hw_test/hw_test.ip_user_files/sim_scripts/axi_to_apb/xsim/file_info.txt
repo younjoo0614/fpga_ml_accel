@@ -1,0 +1,2 @@
+axi_to_apb_sim_netlist.v,verilog,xil_defaultlib,../../../../../../src/common_ip/axi_to_apb/axi_to_apb_sim_netlist.v,
+glbl.v,Verilog,xil_defaultlib,glbl.v

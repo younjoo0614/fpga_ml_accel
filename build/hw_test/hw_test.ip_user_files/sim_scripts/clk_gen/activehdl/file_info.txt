@@ -1,0 +1,6 @@
+xpm_cdc.sv,systemverilog,xpm,../../../../../../../../opt/Xilinx/Vivado/2020.1/data/ip/xpm/xpm_cdc/hdl/xpm_cdc.sv,incdir="../../../../../../src/common_ip/clk_gen"
+xpm_fifo.sv,systemverilog,xpm,../../../../../../../../opt/Xilinx/Vivado/2020.1/data/ip/xpm/xpm_fifo/hdl/xpm_fifo.sv,incdir="../../../../../../src/common_ip/clk_gen"
+xpm_memory.sv,systemverilog,xpm,../../../../../../../../opt/Xilinx/Vivado/2020.1/data/ip/xpm/xpm_memory/hdl/xpm_memory.sv,incdir="../../../../../../src/common_ip/clk_gen"
+xpm_VCOMP.vhd,vhdl,xpm,../../../../../../../../opt/Xilinx/Vivado/2020.1/data/ip/xpm/xpm_VCOMP.vhd,incdir="../../../../../../src/common_ip/clk_gen"
+clk_gen_sim_netlist.v,verilog,xil_defaultlib,../../../../../../src/common_ip/clk_gen/clk_gen_sim_netlist.v,incdir="../../../../../../src/common_ip/clk_gen"
+glbl.v,Verilog,xil_defaultlib,glbl.v

@@ -1,0 +1,6 @@
+verilog xil_defaultlib --include "../../../../../../src/common_ip/axi4_32_to_axilite/hdl" \
+"../../../../../../src/common_ip/axi4_32_to_axilite/axi4_32_to_axilite_sim_netlist.v" \
+
+verilog xil_defaultlib "glbl.v"
+
+nosort

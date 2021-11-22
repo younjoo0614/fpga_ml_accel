@@ -1,0 +1,2 @@
+clk_gen_sim_netlist.v,verilog,xil_defaultlib,../../../../../../src/common_ip/clk_gen/clk_gen_sim_netlist.v,incdir="../../../../../../src/common_ip/clk_gen"
+glbl.v,Verilog,xil_defaultlib,glbl.v

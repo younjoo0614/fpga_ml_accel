@@ -1,0 +1,6 @@
+verilog xil_defaultlib --include "../../../../../../src/common_ip/axi_crossbar_1/hdl" \
+"../../../../../../src/common_ip/axi_crossbar_1/axi_crossbar_1_sim_netlist.v" \
+
+verilog xil_defaultlib "glbl.v"
+
+nosort
