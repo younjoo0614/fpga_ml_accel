@@ -2,6 +2,36 @@
 * fc_module.v
 */
 
+module pe 
+  # (
+    parameter op_size = 8
+  )
+  (
+    input wire clk, rstn,
+    input wire [op_size-1:0] in_a, in_b,
+
+    output wire [op_size-1:0] out_a, out_b,
+    output reg [2 * op_size-1:0] out_c
+  );
+  reg [op_size-1:0] output_a, output_b, output_c;
+  assign out_a = output_a;
+  assign out_b = output_b;
+
+  always @(posedge clk) begin
+    if (~rstn) begin
+      output_a = {op_size{1'b0}};
+      output_b = {op_size{1'b0}};
+      output_c = {2*op_size{1'b0}};
+    end
+    else begin
+      output_a = in_a;
+      output_b = in_b;
+      out_c = out_c + in_a * in_b;
+    end    
+  end
+  
+endmodule
+
 module fc_module 
   #(
     parameter integer C_S00_AXIS_TDATA_WIDTH = 32
