@@ -203,7 +203,7 @@ module pool_module
           if (S_AXIS_TLAST ) begin
             state <= STATE_RECEIVE_DONE;
           end  
-          if (addr == 7'b1000000) begin
+          else if (addr == 7'b1000000) begin
             state <= STATE_POOL;
             addr <= 7'h00;
           end
@@ -221,64 +221,41 @@ module pool_module
           s_axis_tready <= 1'b0;
           m_axis_tvalid <= 1'b0;
           receive_done <= 1'b1;
-          if (flen == 6'b000100) begin
-            if (idx_16[2]) begin
-              state <= STATE_IDLE;
-              idx_16 <= 6'b000000;
-              pool_done <= 1'b1;
-            end   
-            else begin
-              idx_16 <= idx_16 + 1;
-              if (delay== 2'b00) begin
-                input_a <= feat[idx_16];
-                input_b <= feat[idx_16 + 1];
-                delay <= delay + 1;
-              end
-              else if (delay == 2'b01) begin
-                input_a <= (input_b > input_a) ? input_b:input_a;
-                input_b <= feat[idx_16 + 6'd32];
-                delay <= delay + 1;
-              end
-              else if (delay == 2'b10) begin             
-                input_a <= (input_b > input_a) ? input_b:input_a;
-                input_b <= feat[idx_16 + 6'd33];
-                delay <= delay +1;
-              end
-              else begin
-                max <= (input_b > input_a) ? input_b:input_a;
-                state <= STATE_ACCUM;
-              end
-            end           
-          end
+          
+          if ((idx_16[2] && flen_reg == 6'd4) || idx_16[5]) begin
+            state <= STATE_IDLE;
+            idx_16 <= 6'b000000;
+            pool_done <= 1'b1;
+          end   
           else begin
-            if (idx_16[5]) begin
-              state <= STATE_IDLE;
-              idx_16 <= 6'b000000;
-              pool_done <= 1'b1;
-            end   
+            idx_16 <= idx_16 + 1;
+            if (delay== 2'b00) begin
+              input_a <= feat[idx_16];
+              input_b <= feat[idx_16 + 1];
+              delay <= delay + 1;
+            end
+            else if (delay == 2'b01) begin
+              input_a <= (input_b > input_a) ? input_b:input_a;
+              if (flen_reg == 6'd4) input_b <= feat[idx_16 + 6'd4];
+              else if (flen_reg == 6'd8) input_b <= feat[idx_16 + 6'd8];
+              else if (flen_reg == 6'd16) input_b <= feat[idx_16 + 6'd16];
+              else input_b <= feat[idx_16 + 6'd32];
+              delay <= delay + 1;
+            end
+            else if (delay == 2'b10) begin             
+              input_a <= (input_b > input_a) ? input_b:input_a;
+              if (flen_reg == 6'd4) input_b <= feat[idx_16 + 6'd5];
+              else if (flen_reg == 6'd8) input_b <= feat[idx_16 + 6'd9];
+              else if (flen_reg == 6'd16) input_b <= feat[idx_16 + 6'd17];
+              else input_b <= feat[idx_16 + 6'd33];
+              delay <= delay +1;
+            end
             else begin
-              idx_16 <= idx_16 + 1;
-              if (delay== 2'b00) begin
-                input_a <= feat[idx_16];
-                input_b <= feat[idx_16 + 1];
-                delay <= delay + 1;
-              end
-              else if (delay == 2'b01) begin
-                input_a <= (input_b > input_a) ? input_b:input_a;
-                input_b <= feat[idx_16 + 6'd32];
-                delay <= delay + 1;
-              end
-              else if (delay == 2'b10) begin             
-                input_a <= (input_b > input_a) ? input_b:input_a;
-                input_b <= feat[idx_16 + 6'd33];
-                delay <= delay +1;
-              end
-              else begin
-                max <= (input_b > input_a) ? input_b:input_a;
-                state <= STATE_ACCUM;
-              end
-            end           
-          end
+              max <= (input_b > input_a) ? input_b:input_a;
+              state <= STATE_ACCUM;
+            end
+          end           
+                  
         end
 
         STATE_POOL: begin  
@@ -297,12 +274,14 @@ module pool_module
             end
             else if (delay == 2'b01) begin
               input_a <= (input_b > input_a) ? input_b:input_a;
-              input_b <= feat[idx_16 + 6'd32];
+              if (flen_reg == 6'd16) input_b <= feat[idx_16 + 6'd16];
+              else input_b <= feat[idx_16 + 6'd32];
               delay <= delay + 1;
             end
             else if (delay == 2'b10) begin             
               input_a <= (input_b > input_a) ? input_b:input_a;
-              input_b <= feat[idx_16 + 6'd33];
+              if (flen_reg == 6'd16) input_b <= feat[idx_16 + 6'd17];
+              else input_b <= feat[idx_16 + 6'd33];
               delay <= delay +1;
             end
             else begin
@@ -349,7 +328,7 @@ module pool_module
           m_axis_tdata <= tdata;
           if (receive_done) begin
             state <= STATE_RECEIVE_DONE;
-            if ((flen == 6'd4_&& idx_16[2]) || idx_16[5]) m_axis_tlast <= 1'b1;
+            if ((flen_reg == 6'd4_&& idx_16[2]) || idx_16[5]) m_axis_tlast <= 1'b1;
             else m_axis_tlast <= 1'b0;
           end
           else state <= STATE_POOL;
