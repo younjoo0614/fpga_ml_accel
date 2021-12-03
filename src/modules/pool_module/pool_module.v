@@ -25,20 +25,27 @@ module pool_module
     output wire M_AXIS_TVALID, 
 
     input pool_start, 
-    output reg pool_done
+    output reg pool_done,
 
+    
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
-
+    input flen_receive, inch_receive
   );
+
+  localparam STATE_IDLE = 2'd0,
+  STATE_RECEIVE_FLEN = 2'd1,
+  STATE_RECEIVE_INCH = 2'd2;
+
+  reg [1:0] state;
   
   reg m_axis_tuser;
   reg [C_S00_AXIS_TDATA_WIDTH-1 : 0] m_axis_tdata;
   reg [(C_S00_AXIS_TDATA_WIDTH/8)-1 : 0] m_axis_tkeep;
   reg m_axis_tlast;
   reg m_axis_tvalid;
-  wire s_axis_tready;
+  reg s_axis_tready;
   
   assign S_AXIS_TREADY = s_axis_tready;
   assign M_AXIS_TDATA = m_axis_tdata;
@@ -50,5 +57,48 @@ module pool_module
   //////////////////////////////////////////////////////////////////////////
   // TODO : Write your code here
   //////////////////////////////////////////////////////////////////////////
+
+  sram_32x16 u_sram_32x16(
+  .addra(addr),
+  .clka(clk),
+  .dina(din),
+  .douta(dout),
+  .ena(bram_en),
+  .wea(we)
+);
+
+  always @ (posedge clk ) begin
+    if (!rstn) begin
+      state <= STATE_IDLE;
+    end
+    else begin
+      case (state)
+        STATE_IDLE: begin
+          s_axis_tready <= 1'b0;
+          if (flen_receive) begin
+            state <= STATE_RECEIVE_FLEN;
+          end
+          else if (inch_receive) begin
+            state <= STATE_RECEIVE_INCH;
+          end
+        end
+        STATE_RECEIVE_FLEN: begin
+          s_axis_tready <= 1'b1;
+          if (S_AXIS_TLAST) begin
+            state <= STATE_IDLE;
+          end
+          
+        end
+        STATE_RECEIVE_INCH: begin
+          s_axis_tready <= 1'b1;
+          if (S_AXIS_TLAST) begin
+            state <= STATE_IDLE;
+          end
+          
+        end
+      endcase
+    end
+  end
+
   
 endmodule
