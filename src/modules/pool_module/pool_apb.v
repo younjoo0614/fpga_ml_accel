@@ -20,8 +20,9 @@ module pool_apb
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
-    output wire FLEN_RECEIVE, INCH_RECEIVE
-    
+
+    output reg[5:0] flen,
+    output reg[8:0] inch
   );
   
   wire state_enable;
@@ -34,9 +35,6 @@ module pool_apb
   //////////////////////////////////////////////////////////////////////////
   // TODO : Write your code here
   //////////////////////////////////////////////////////////////////////////
-  reg flen_receive, inch_receive;
-  assign FLEN_RECEIVE = flen_receive;
-  assign INCH_RECEIVE = inch_receive;
   // READ OUTPUT
   always @(posedge PCLK, negedge PRESETB) begin
     if (PRESETB == 1'b0) begin
@@ -74,10 +72,10 @@ module pool_apb
             pool_start <= PWDATA[0];
           end
           32'h00000004: begin
-            flen_receive <= 1'b1;
+            flen <= PWDATA;
           end
           32'h0000000c: begin
-            inch_receive <= 1'b1;
+            inch <= PWDATA;
           end
           default: ;
         endcase
