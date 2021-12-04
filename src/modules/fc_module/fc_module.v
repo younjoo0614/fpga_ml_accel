@@ -98,17 +98,17 @@ CLG4 clg4(.C_in(C_in), .p(p), .g(g), .C_out(c));
 
 endmodule
 
-module multiplier (
+module pe (
                     A,    // Signed 8 bit
                     B,    // Signed 8 bit
                     clk,
-                    sum);
+                    en, result, done, of);
   
   input [7:0]      A;
   input [7:0]      B;
-  input              clk;
-  output reg  [15:0] sum;
-      
+  input              clk,en;
+  output reg  [15:0] result;
+  output reg done, of;
   // Internal Wires 
   wire   [7:0]   A_mag;         
   wire   [7:0]   B_mag;
@@ -125,7 +125,9 @@ module multiplier (
   wire           sign;           
   
   // Internal Registers
+  reg    [15:0]  sum;
   reg    [7:0]   A_reg;
+  reg    [7:0]   B1_reg, B2_reg, B3_reg, B4_reg, B5_reg, B6_reg, B7_reg, B8_reg, B9_reg;
   reg    [7:0]   p1_reg, p2_reg, p3_reg, p4_reg, p5_reg, p6_reg, p7_reg, p8_reg;
   reg    [5:0]   lsb_sum21_reg, lsb_sum22_reg, lsb_sum23_reg, lsb_sum24_reg;
   reg    [7:4]   p2_msb, p4_msb, p6_msb, p8_msb;
@@ -164,15 +166,18 @@ module multiplier (
   ///////////////////////////////////////////////////////
   
   always @(posedge clk) begin
-    p1_reg <= p1;
-    p3_reg <= p3;
-    p5_reg <= p5;
-    p7_reg <= p7;
-    p2_reg <= p2;
-    p4_reg <= p4;
-    p6_reg <= p6;
-    p8_reg <= p8;
-    sign_s1 <= sign;                              
+    if (en) begin
+      p1_reg <= p1;
+      p3_reg <= p3;
+      p5_reg <= p5;
+      p7_reg <= p7;
+      p2_reg <= p2;
+      p4_reg <= p4;
+      p6_reg <= p6;
+      p8_reg <= p8;
+      sign_s1 <= sign; 
+      B1_reg <= B;  
+    end                               
   end
   
   
@@ -186,21 +191,25 @@ module multiplier (
   ///////////////////////////////////////////////////////
 
   always @(posedge clk) begin 
-    lsb_sum21_reg <= lsb_sum21;
-    lsb_sum22_reg <= lsb_sum22;
-    lsb_sum23_reg <= lsb_sum23;
-    lsb_sum24_reg <= lsb_sum24;
-    
-    p1_msb <= p1_reg[7:5];
-    p2_msb <= p2_reg[7:4];
-    p3_msb <= p3_reg[7:5];
-    p4_msb <= p4_reg[7:4];
-    p5_msb <= p5_reg[7:5];
-    p6_msb <= p6_reg[7:4];
-    p7_msb <= p7_reg[7:5];
-    p8_msb <= p8_reg[7:4];
-    
-    sign_s2 <= sign_s1;                   
+    if (en) begin
+      lsb_sum21_reg <= lsb_sum21;
+      lsb_sum22_reg <= lsb_sum22;
+      lsb_sum23_reg <= lsb_sum23;
+      lsb_sum24_reg <= lsb_sum24;
+      
+      p1_msb <= p1_reg[7:5];
+      p2_msb <= p2_reg[7:4];
+      p3_msb <= p3_reg[7:5];
+      p4_msb <= p4_reg[7:4];
+      p5_msb <= p5_reg[7:5];
+      p6_msb <= p6_reg[7:4];
+      p7_msb <= p7_reg[7:5];
+      p8_msb <= p8_reg[7:4];
+      
+      sign_s2 <= sign_s1;         
+      B2_reg <= B1_reg;  
+    end
+            
   end
 
 
@@ -219,12 +228,15 @@ module multiplier (
   assign sum34 = {msb_sum34[4:0], lsb_sum24_reg[4:0]};
   
   always @(posedge clk) begin
-    sum31_reg <= sum31;
-    sum32_reg <= sum32;
-    sum33_reg <= sum33;
-    sum34_reg <= sum34;
-  
-    sign_s3 <= sign_s2;                   
+    if (en) begin
+      sum31_reg <= sum31;
+      sum32_reg <= sum32;
+      sum33_reg <= sum33;
+      sum34_reg <= sum34;
+    
+      sign_s3 <= sign_s2;    
+      B3_reg <= B2_reg;    
+    end                        
   end
   
   
@@ -236,15 +248,18 @@ module multiplier (
   ///////////////////////////////////////////////////////
   
   always @(posedge clk) begin
-    lsb_sum41_reg <= lsb_sum41;
-    lsb_sum42_reg <= lsb_sum42;
+    if (en) begin
+      lsb_sum41_reg <= lsb_sum41;
+      lsb_sum42_reg <= lsb_sum42;
+      
+      msb_41 <= sum31_reg[9:7];
+      msb_42 <= sum32_reg[9:5];
+      msb_43 <= sum33_reg[9:7];
+      msb_44 <= sum34_reg[9:5];
     
-    msb_41 <= sum31_reg[9:7];
-    msb_42 <= sum32_reg[9:5];
-    msb_43 <= sum33_reg[9:7];
-    msb_44 <= sum34_reg[9:5];
-  
-    sign_s4 <= sign_s3;               
+      sign_s4 <= sign_s3;     
+      B4_reg <= B3_reg;                
+    end       
   end
   
   
@@ -259,10 +274,13 @@ module multiplier (
   assign sum52 = {msb_sum52[4:0], lsb_sum42_reg[6:0]};
   
   always @(posedge clk) begin
-    sum51_reg <= sum51;
-    sum52_reg <= sum52;
+    if (en) begin
+      sum51_reg <= sum51;
+      sum52_reg <= sum52;
 
-    sign_s5 <= sign_s4;               
+      sign_s5 <= sign_s4;  
+      B5_reg <= B4_reg; 
+    end                  
   end
   
   
@@ -273,12 +291,15 @@ module multiplier (
   ///////////////////////////////////////////////////////
    
   always @(posedge clk) begin
-    lsb_sum6_reg <= lsb_sum6;
+    if (en) begin
+      lsb_sum6_reg <= lsb_sum6;
 
-    msb_61 <= sum51_reg[11:9];
-    msb_62 <= sum52_reg[11:5];            
-  
-    sign_s6 <= sign_s5;               
+      msb_61 <= sum51_reg[11:9];
+      msb_62 <= sum52_reg[11:5];            
+    
+      sign_s6 <= sign_s5; 
+      B6_reg <= B5_reg;     
+    end               
   end
   
   // Stage 7: Add MSBs
@@ -290,76 +311,44 @@ module multiplier (
   assign sum_unsigned = {msb_sum7, lsb_sum6_reg[8:0]};             
   
   always @(posedge clk) begin
-    sum_unsigned_reg <= sum_unsigned;                     
+    if (en) begin
+      sum_unsigned_reg <= sum_unsigned;                     
     
-    sign_s7 <= sign_s6;                                  
+      sign_s7 <= sign_s6;   
+      B7_reg <= B6_reg;    
+    end                   
   end
   
   // Stage 8: Take the Result of Multiplication
   ///////////////////////////////////////////////////////
     // TODO: insert value to sum for each condition using "sum_unsigned_reg"
   always @(posedge clk) begin
-    if(sign_s7==1'b0) sum <= sum_unsigned_reg;
+    if (en) begin
+      if(sign_s7==1'b0) sum <= sum_unsigned_reg;
 
-    else sum <= ~sum_unsigned_reg[15:0] + 1;
-
+      else sum <= ~sum_unsigned_reg[15:0] + 1;
+      B7_reg <= B6_reg;       
+    end
+     
   ///////////////////////////////////////////////////////
-
   end
-  
-endmodule
-
-module pe  //9 cycle 기다려야 올바른 out_c 나오기 시작
-  # (
-    parameter op_size = 8
-  )
-  (
-    input wire clk, rstn,
-    input wire [op_size-1:0] in_a, in_b,
-
-    output wire [op_size-1:0] output_a, output_b,
-    output reg [2 * op_size-1:0] out_c
-  );
-
-  reg [op_size-1:0] out_a, out_b;
-  reg [2*op_size -1:0] temp, output_c;
-  reg [3:0] delay;
-  reg C_out, of;
-
-  assign output_a = out_a;
-  assign output_b = out_b;
-
-  multiplier u_multiplier (
-    .A(in_a),
-    .B(in_b),
-    .clk(clk),
-    .sum(temp)
-  );
-
-  CLA_16Bit u_CLA_16Bit (
-    .A(out_c),
-    .B(temp),
-    .C_in (1'b0),
-    
-    .S(output_c),
-    .C_out(C_out),
+  // Stage 9: Add inputa*inputb and outputc
+  reg [15:0] temp;
+  CLA_16Bit u_cla_16bit (
+    .A(sum),
+    .B(B7_reg),
+    .C_in(1'b0),
+    .C_out(),
+    .S(temp),
     .OF(of)
   );
-
   always @(posedge clk) begin
-    if (!rstn) begin
-      out_a <= {op_size{1'b0}};
-      out_b <= {op_size{1'b0}};
-      out_c <= {2*op_size{1'b0}};
-    end
-    else begin
-      out_a <= in_a;
-      out_b <= in_b;
-      out_c <= output_c;
+    if (en) begin
+      result <= temp;
+      done <= 1'b1;
     end    
   end
 endmodule
-
 
 module fc_module 
   #(

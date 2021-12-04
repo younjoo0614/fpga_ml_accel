@@ -499,11 +499,14 @@ module top_simulation
         .M_AXIS_TDATA(M_AXIS_TDATA),
         .M_AXIS_TKEEP(M_AXIS_TKEEP),
         .M_AXIS_TLAST(M_AXIS_TLAST),
-        .M_AXIS_TVALID(M_AXIS_TVALID)
+        .M_AXIS_TVALID(M_AXIS_TVALID),
         
         
         /////////////////////// ?????? ???? begin ////////////////////////////   
-       
+        .pool_start(init),
+        .flen(input_size),
+        .inch(input_channel_size),
+        .pool_done(maxpool_done)
         /////////////////////// ?????? ???? end //////////////////////////////////////
         );
         
