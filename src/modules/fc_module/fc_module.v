@@ -317,13 +317,17 @@ module pe  //9 cycle 기다려야 올바른 out_c 나오기 시작
     input wire clk, rstn,
     input wire [op_size-1:0] in_a, in_b,
 
-    output reg [op_size-1:0] out_a, out_b,
+    output wire [op_size-1:0] output_a, output_b,
     output reg [2 * op_size-1:0] out_c
   );
-  
+
+  reg [op_size-1:0] out_a, out_b;
   reg [2*op_size -1:0] temp, output_c;
   reg [3:0] delay;
   reg C_out, of;
+
+  assign output_a = out_a;
+  assign output_b = out_b;
 
   multiplier u_multiplier (
     .A(in_a),
@@ -356,6 +360,7 @@ module pe  //9 cycle 기다려야 올바른 out_c 나오기 시작
   end
 endmodule
 
+
 module fc_module 
   #(
     parameter integer C_S00_AXIS_TDATA_WIDTH = 32
@@ -381,8 +386,8 @@ module fc_module
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports as you need
     //////////////////////////////////////////////////////////////////////////
-    input wire feat_receive, bias_receive, weight_receive, fc_start,
-    input wire[31:0] size,
+    input wire [2:0] command,
+    input wire[20:0] size,
     output wire [31:0] FEAT_SIZE, BIAS_SIZE, WEIGHT_SIZE,
     output wire FC_DONE
   ); 
@@ -417,6 +422,72 @@ module fc_module
   ////////////////////////////////////////////////////////////////////////////
   // TODO : Write your code here
   ////////////////////////////////////////////////////////////////////////////
+  reg[10:0] w_addr, f_addr;
+  reg bram_en, w_we, f_we;
+  wire [31:0] w_dout, f_dout;
+  reg [31:0] din;
+  reg [31:0] tdata;
+  wire [7:0] a12, a23, a34;
+  reg [1:0] delay;
+  reg f_bram_en, w_bram_en;
+
+  sram_32x1024 weight_sram_32x1024(
+  .addra(w_addr[9:0]),
+  .clka(clk),
+  .dina(din),
+  .douta(w_dout),
+  .ena(w_bram_en),
+  .wea(w_we)
+  );
+
+  sram_32x1024 feat_sram_32x1024(
+  .addra(f_addr[9:0]),
+  .clka(clk),
+  .dina(din),
+  .douta(f_dout),
+  .ena(f_bram_en),
+  .wea(f_we)
+  );
+
+  pe pe1 (
+    .clk(clk),
+    .rstn(rstn),
+    .in_a(f_dout),
+    .in_b(w_dout[31:24]),
+    .out_a(a12),
+    .out_b(),
+    .out_c(tdata[31:24])
+  );
+
+  pe pe2 (
+    .clk(clk),
+    .rstn(rstn),
+    .in_a(a12),
+    .in_b(w_dout[23:16]),
+    .out_a(a23),
+    .out_b(),
+    .out_c(tdata[23:16])
+  );
+
+  pe pe3 (
+    .clk(clk),
+    .rstn(rstn),
+    .in_a(a23),
+    .in_b(w_dout[15:8]),
+    .out_a(a34),
+    .out_b(),
+    .out_c(tdata[15:8])
+  );
+
+  pe pe4 (
+    .clk(clk),
+    .rstn(rstn),
+    .in_a(a34),
+    .in_b(w_dout[15:8]),
+    .out_a(),
+    .out_b(),
+    .out_c(tdata[7:0])
+  );
 
   reg [31:0] feat_size, bias_size, weight_size;
   reg fc_done;
@@ -435,41 +506,57 @@ module fc_module
       case (state)
         STATE_IDLE: begin
           s_axis_tready <= 1'b0;
-          if (feat_receive) begin
+          if (command[0]) begin
             state <= STATE_RECEIVE_FEATURE;
+            s_axis_tready <= 1'b1;
           end
-          else if (bias_receive) begin
+          else if (command[1]) begin
             state <= STATE_RECEIVE_BIAS;
+            s_axis_tready <= 1'b1;
+          end
+          else if (command[2]) begin
+            state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
+            s_axis_tready <= 1'b1;
           end
         end
         STATE_RECEIVE_FEATURE: begin
-          s_axis_tready <= 1'b1;
-          if (S_AXIS_TLAST) begin
-            state <= STATE_IDLE;
+          f_we <= 1'b1;
+          if (f_we) begin
+            if (size[11]) begin
+              
+            end
+            else if (size[9]) begin
+              
+            end
+            else begin
+              
+            end
           end
-          
         end
         STATE_RECEIVE_BIAS: begin
-          s_axis_tready <= 1'b1;
-          if (S_AXIS_TLAST) begin
-            state <= STATE_IDLE;
+          w_we <= 1'b1;
+          if (w_we) begin
+            if (size[19]) begin
+              
+            end
+            else if (size[15]) begin
+              
+            end
+            else begin
+              
+            end
           end
-          
         end
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
-          s_axis_tready <= 1'b1;
-          if (S_AXIS_TLAST) begin
-            state <= STATE_IDLE;
-          end          
           
         end
         STATE_READ_BIAS: begin
           
         end
-        STATE_MAC: begin
+        STATE_COMPUTE: begin
           
         end
-        STATE_ACCUM: begin
+        STATE_PSUM: begin
           
         end
         STATE_WRITE_RESULT: begin
@@ -485,6 +572,8 @@ module fc_module
   // data path
   always @(posedge clk) begin
     if (!rstn) begin
+      f_addr <= 10'b0;
+      w_addr <= 10'b0;
     end
     else begin
       case (state)
@@ -492,46 +581,29 @@ module fc_module
           
         end
         STATE_RECEIVE_FEATURE: begin
-          if (size == 32'h00000400) begin
-            
-          end
-          else if (size == 32'h00000100) begin
-            
-          end
-          else begin
-            
-          end
-          
+                    
         end
         STATE_RECEIVE_BIAS: begin
-          if (size == 32'h00000100) begin
-            
-          end
-          else if (size == 32'h00000040) begin
-            
-          end
-          else begin
-            
-          end
+          
         end
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
-          if (size == 32'h00400000) begin
-            
-          end
-          else if (size == 32'h00004000) begin
-            
-          end 
-          else begin
-            
-          end
+          
         end
         STATE_READ_BIAS: begin
           
         end
-        STATE_MAC: begin
-          
+        STATE_COMPUTE: begin
+          f_bram_en <= 1'b1;
+          w_bram_en <= 1'b1;
+          f_addr <= f_addr + 1;
+          if (f_addr[10]) begin
+            f_bram_en <= 1'b0;
+          end
+          else begin
+            
+          end
         end
-        STATE_ACCUM: begin
+        STATE_PSUM: begin
           
         end
         STATE_WRITE_RESULT: begin
