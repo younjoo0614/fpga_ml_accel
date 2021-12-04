@@ -129,10 +129,9 @@ module pool_module
 
   localparam STATE_IDLE = 3'd0,  
   STATE_RECEIVE_DATA = 3'd1,
-  STATE_RECEIVE_DONE = 3'd4,
-  STATE_POOL = 3'd5,
-  STATE_ACCUM = 3'd2,
-  STATE_DATA_SEND = 3'd6;
+  STATE_POOL = 3'd2,
+  STATE_ACCUM = 3'd3,
+  STATE_DATA_SEND = 3'd4;
   
 
   reg [2:0] state;
@@ -196,144 +195,157 @@ module pool_module
             flen_reg <= flen;
             inch_reg <= inch;
             state<= STATE_RECEIVE_DATA;
+            s_axis_tready <= 1'b1;
           end
         end
 
-        STATE_RECEIVE_DATA: begin          
-          if (S_AXIS_TLAST ) begin
-            state <= STATE_RECEIVE_DONE;
-          end  
-          else if (addr == 7'b1000000) begin
+        STATE_RECEIVE_DATA: begin     
+          m_axis_tvalid <= 1'b0;     
+          s_axis_tready <= 1'b1;
+          if (addr[6] && flen_reg [5]) begin
             state <= STATE_POOL;
             addr <= 7'h00;
+            s_axis_tready <= 1'b0; 
           end
-          else begin
-            s_axis_tready <= 1'b1;          
-            addr <= addr + 4;
-            feat[addr] <= S_AXIS_TDATA[31:24];
-            feat[addr+1] <= S_AXIS_TDATA[23:16];
-            feat[addr+2] <= S_AXIS_TDATA[15:8];
-            feat[addr+3] <= S_AXIS_TDATA[7:0];
+          else if (addr[5] && flen_reg [4]) begin
+            state <= STATE_POOL;
+            addr <= 7'h00;
+            s_axis_tready <= 1'b0; 
           end
-        end
-
-        STATE_RECEIVE_DONE: begin
-          s_axis_tready <= 1'b0;
-          m_axis_tvalid <= 1'b0;
-          receive_done <= 1'b1;
-          
-          if ((idx_16[2] && flen_reg == 6'd4) || idx_16[5]) begin
-            state <= STATE_IDLE;
-            idx_16 <= 6'b000000;
-            pool_done <= 1'b1;
-          end   
-          else begin
-            idx_16 <= idx_16 + 1;
-            if (delay== 2'b00) begin
-              input_a <= feat[idx_16];
-              input_b <= feat[idx_16 + 1];
-              delay <= delay + 1;
-            end
-            else if (delay == 2'b01) begin
-              input_a <= (input_b > input_a) ? input_b:input_a;
-              if (flen_reg == 6'd4) input_b <= feat[idx_16 + 6'd4];
-              else if (flen_reg == 6'd8) input_b <= feat[idx_16 + 6'd8];
-              else if (flen_reg == 6'd16) input_b <= feat[idx_16 + 6'd16];
-              else input_b <= feat[idx_16 + 6'd32];
-              delay <= delay + 1;
-            end
-            else if (delay == 2'b10) begin             
-              input_a <= (input_b > input_a) ? input_b:input_a;
-              if (flen_reg == 6'd4) input_b <= feat[idx_16 + 6'd5];
-              else if (flen_reg == 6'd8) input_b <= feat[idx_16 + 6'd9];
-              else if (flen_reg == 6'd16) input_b <= feat[idx_16 + 6'd17];
-              else input_b <= feat[idx_16 + 6'd33];
-              delay <= delay +1;
-            end
-            else begin
-              max <= (input_b > input_a) ? input_b:input_a;
-              state <= STATE_ACCUM;
-            end
-          end           
-                  
+          else if (addr[4] && flen_reg [3]) begin
+            state <= STATE_POOL;
+            addr <= 7'h00;
+            s_axis_tready <= 1'b0; 
+          end
+          else if (addr[3] && flen_reg [2]) begin
+            state <= STATE_POOL;
+            addr <= 7'h00;
+            s_axis_tready <= 1'b0; 
+          end
+          else begin  
+            if (s_axis_tready) begin
+              addr <= addr + 4;
+              feat[addr+3] <= S_AXIS_TDATA[31:24];
+              feat[addr+2] <= S_AXIS_TDATA[23:16];
+              feat[addr+1] <= S_AXIS_TDATA[15:8];
+              feat[addr] <= S_AXIS_TDATA[7:0];
+              if (S_AXIS_TLAST) receive_done <= 1'b1;    
+              s_axis_tready <= 1'b0;   
+            end           
+          end
         end
 
         STATE_POOL: begin  
           s_axis_tready <= 1'b0; 
-          m_axis_tvalid <= 1'b0;
-          if (idx_16[5]) begin
-            state <= STATE_RECEIVE_DATA;
-            idx_16 <= 6'b000000;
-          end   
+          m_axis_tvalid <= 1'b0;                 
+          delay <= delay + 1;
+          if (delay== 2'b00) begin
+            input_a <= feat[idx_16];
+            input_b <= feat[idx_16 + 1];
+          end
+          else if (delay == 2'b01) begin
+            input_a <= (input_b > input_a) ? input_b:input_a;
+            if (flen_reg[2]) input_b <= feat[idx_16 + 6'd4];
+            else if (flen_reg[3]) input_b <= feat[idx_16 + 6'd8];
+            else if (flen_reg[4]) input_b <= feat[idx_16 + 6'd16];
+            else input_b <= feat[idx_16 + 6'd32];              
+          end
+          else if (delay == 2'b10) begin             
+            input_a <= (input_b > input_a) ? input_b:input_a;
+            if (flen_reg[3]) input_b <= feat[idx_16 + 6'd9];
+            else if (flen_reg[4]) input_b <= feat[idx_16 + 6'd17];
+            else if (flen_reg[2]) input_b <= feat[idx_16 + 6'd5];
+            else input_b <= feat[idx_16 + 6'd33];
+          end
           else begin
-            idx_16 <= idx_16 + 1;
-            if (delay== 2'b00) begin
-              input_a <= feat[idx_16];
-              input_b <= feat[idx_16 + 1];
-              delay <= delay + 1;
-            end
-            else if (delay == 2'b01) begin
-              input_a <= (input_b > input_a) ? input_b:input_a;
-              if (flen_reg == 6'd16) input_b <= feat[idx_16 + 6'd16];
-              else input_b <= feat[idx_16 + 6'd32];
-              delay <= delay + 1;
-            end
-            else if (delay == 2'b10) begin             
-              input_a <= (input_b > input_a) ? input_b:input_a;
-              if (flen_reg == 6'd16) input_b <= feat[idx_16 + 6'd17];
-              else input_b <= feat[idx_16 + 6'd33];
-              delay <= delay +1;
-            end
-            else begin
-              max <= (input_b > input_a) ? input_b:input_a;
-              state <= STATE_ACCUM;
-            end
-          end           
+            max <= (input_b > input_a) ? input_b:input_a;
+            state <= STATE_ACCUM;
+            delay <= 2'b0;
+          end
         end
 
         STATE_ACCUM: begin
+          idx_16 <= idx_16 + 2;
           cnt_4 <= cnt_4 +1;
           if (cnt_4 == 3'b000) begin
-            tdata[31:24] <= max;
-            if (receive_done) begin
-              state <= STATE_RECEIVE_DONE;
-            end
-            else state <= STATE_POOL;
+            tdata[7:0] <= max;            
+            state <= STATE_POOL;
           end
           else if (cnt_4 == 3'b001) begin
-            tdata[23:16] <= max;
-            if (receive_done) begin
-              state <= STATE_RECEIVE_DONE;
+            tdata[15:8] <= max;
+            if (flen_reg[2]) begin
+              state <= STATE_RECEIVE_DATA;              
+              idx_16 <= 6'b000000;
             end
             else state <= STATE_POOL;
           end
           else if (cnt_4 == 3'b010) begin
-            tdata[15:8] <= max;
-            if (receive_done) begin
-              state <= STATE_RECEIVE_DONE;
-            end
-            else state <= STATE_POOL;
+            tdata[23:16] <= max;          
+            state <= STATE_POOL;
           end
           else begin
             state <= STATE_DATA_SEND;
-            tdata[7:0] <= max;
+            tdata[31:24] <= max;
             cnt_4 <= 3'b000;
-          end
-          delay <= 2'b0;          
+          end          
         end
 
         STATE_DATA_SEND: begin
           m_axis_tvalid <= 1'b1;
-          s_axis_tready <= 1'b0;
           m_axis_tdata <= tdata;
-          if (receive_done) begin
-            state <= STATE_RECEIVE_DONE;
-            if ((flen_reg == 6'd4_&& idx_16[2]) || idx_16[5]) m_axis_tlast <= 1'b1;
-            else m_axis_tlast <= 1'b0;
+          
+          if (flen_reg[5] && idx_16[5]) begin
+            if (receive_done) begin
+              m_axis_tlast <= 1'b1;
+              pool_done <= 1'b1;
+              state <= STATE_IDLE;
+            end
+            else begin
+              state <= STATE_RECEIVE_DATA;
+              
+              idx_16 <= 6'b000000;
+            end            
           end
-          else state <= STATE_POOL;
-        end
-        
+          else if (flen_reg[4] && idx_16[4]) begin
+            if (receive_done) begin
+              m_axis_tlast <= 1'b1;
+              pool_done <= 1'b1;
+              state <= STATE_IDLE;
+            end
+            else begin
+              state <= STATE_RECEIVE_DATA;
+              
+              idx_16 <= 6'b000000;
+            end
+          end           
+          else if (flen_reg[3] && idx_16[3]) begin
+            if (receive_done) begin
+              m_axis_tlast <= 1'b1;
+              pool_done <= 1'b1;
+              state <= STATE_IDLE;
+            end
+            else begin
+              state <= STATE_RECEIVE_DATA;
+              
+              idx_16 <= 6'b000000;
+            end
+          end   
+          else if (flen_reg[2] && idx_16[2]) begin
+            if (receive_done) begin
+              m_axis_tlast <= 1'b1;
+              pool_done <= 1'b1;
+              state <= STATE_IDLE;
+            end
+            else begin
+              state <= STATE_RECEIVE_DATA;
+              
+              idx_16 <= 6'b000000;
+            end
+          end   
+          else begin
+            state <= STATE_POOL;
+          end          
+        end        
       endcase
     end
   end
