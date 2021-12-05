@@ -30,6 +30,30 @@ module CLA_28Bit (
 
 endmodule
 
+module CLA_16Bit (
+  input [15:0] A, 
+  input [15:0] B, 
+  input   C_in,     // if 0 --> add, 1 --> sub
+
+  output [15:0] S,
+  output  C_out
+);
+  wire [3:0] C_out_LCU;   // carry
+  wire [3:0] P;
+  wire [3:0] G;
+
+  wire [15:0] A_1; 
+
+  assign A_1 = C_in ? ~A : A;
+  assign C_out = C_in ? ~C_out_LCU[3] : C_out_LCU[3];
+
+  CLG4 clg4(.C_in(C_in), .p(P), .g(G), .C_out(C_out_LCU));
+  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
+  CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(C_out_LCU[2]), .p_g(P[2]), .g_g(G[2]), .of());
+  CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(C_out_LCU[3]), .p_g(P[3]), .g_g(G[3]), .of());
+endmodule
+
 module CLG4
 (
   input C_in,
@@ -722,11 +746,26 @@ module fc_module
         STATE_SEND_RESULT: begin
           m_axis_tvalid <= 1'b1;
           state <= STATE_COMPUTE;
+          if (b_addr[9] && b_addr[8]) begin
+            m_axis_tlast <= 1'b1;
+          end
         end
       endcase
     end
   end
  
+ reg [27:0] bias_temp, pe_result, bias_add_result;
+ reg [2:0] bias_add_delay;
+
+ CLA_28Bit u_bias_add(
+   .A(pe_result),
+   .B(bias_temp),
+   .C_in(1'b0),
+   .S(),
+   .C_out(bias_add_result),
+   .OF()
+ );
+
   reg [3:0] pe_delay;
   // data path
   always @(posedge clk) begin
@@ -783,7 +822,7 @@ module fc_module
             if (w1_bram_en && w1_we) begin
               w1_addr <= w1_addr + 1;
               weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size/4 - 1) begin
+              if (weight_cnt >= feat_size>>2 - 1) begin
                 weight_cnt <= 8'b0;
                 weight_n <= 2'b01;
               end
@@ -793,7 +832,7 @@ module fc_module
             if (w2_bram_en && w2_we) begin
               w2_addr <= w2_addr + 1;
               weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size/4 - 1) begin
+              if (weight_cnt >= feat_size>>2 - 1) begin
                 weight_cnt <= 8'b0;
                 weight_n <= 2'b01;
               end
@@ -803,7 +842,7 @@ module fc_module
             if (w3_bram_en && w3_we) begin
               w3_addr <= w3_addr + 1;
               weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size/4 - 1) begin
+              if (weight_cnt >= feat_size>>2 - 1) begin
                 weight_cnt <= 8'b0;
                 weight_n <= 2'b01;
               end
@@ -813,7 +852,7 @@ module fc_module
             if (w4_bram_en && w4_we) begin
               w4_addr <= w4_addr + 1;
               weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size/4 - 1) begin
+              if (weight_cnt >= feat_size>>2 - 1) begin
                 weight_cnt <= 8'b0;
                 weight_n <= 2'b01;
               end
@@ -825,9 +864,15 @@ module fc_module
           end
         end
         STATE_READ_BIAS: begin 
-          b_addr <= next_baddr ;
-          fb_addr <= b_addr;
-          bias <= f_dout;
+          if (delay == 2'b00) begin
+            b_addr <= next_baddr ;
+            fb_addr <= b_addr;
+            delay <= delay +1;
+          end
+          else if (!delay[1]) delay <= delay +1;
+          else begin
+            bias <= f_dout;
+          end          
         end
         STATE_COMPUTE: begin          
           cnt_4 = cnt_4 +1;
@@ -945,11 +990,21 @@ module fc_module
         STATE_ADD_BIAS: begin 
           pe_delay <= pe_delay + 1;
           if (pe_delay[2]) begin
-            if (!pe_delay[0] &&!pe_delay[1]) pe_result1 <= pe_result1_temp;
-            else if (pe_delay[0] && !pe_delay[1]) pe_result2 <= pe_result2_temp;
-            else if (!pe_delay[0] && pe_delay[1]) pe_result3 <= pe_result3_temp;
+            if (!pe_delay[0] &&!pe_delay[1]) begin
+              pe_result <= pe_result1_temp;
+              bias_temp <= bias[7:0];
+            end
+            else if (pe_delay[0] && !pe_delay[1]) begin
+              pe_result <= pe_result2_temp;
+              bias_temp <= bias[15:8];
+            end
+            else if (!pe_delay[0] && pe_delay[1]) begin
+              pe_result <= pe_result3_temp;
+              bias_temp <= bias[23:16];
+            end
             else if (pe_delay[0] &&!pe_delay[1]) begin
-              pe_result4 <= pe_result4_temp;
+              pe_result <= pe_result4_temp;
+              bias_temp <= bias[31:24];
               state <= STATE_SEND_RESULT;
             end
           end
