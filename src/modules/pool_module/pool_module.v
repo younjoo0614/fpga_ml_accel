@@ -188,7 +188,6 @@ module pool_module
         STATE_IDLE: begin
           receive_done <= 1'b0;
           pool_done <= 1'b0;
-          s_axis_tready <= 1'b0;
           m_axis_tvalid <= 1'b0;
           m_axis_tlast <= 1'b0;
           if (pool_start) begin
@@ -196,6 +195,9 @@ module pool_module
             inch_reg <= inch;
             state<= STATE_RECEIVE_DATA;
             s_axis_tready <= 1'b1;
+          end
+          else begin
+          s_axis_tready <= 1'b0;
           end
         end
 
