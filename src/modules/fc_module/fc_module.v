@@ -2,36 +2,33 @@
 * fc_module.v
 */
 
-module CLA_16Bit
-(
-  input [15:0] A, 
-  input [15:0] B, 
+module CLA_28Bit (
+  input [27:0] A, 
+  input [27:0] B, 
   input   C_in,     // if 0 --> add, 1 --> sub
 
-  output [15:0] S,    // sum
-  output  C_out,      // borrow if C_in = 1 (subtract)
-  output  OF      // overflow
+  output [27:0] S,
+  output  C_out
 );
+  wire [6:0] C_out_LCU;   // carry
+  wire [6:0] P;
+  wire [6:0] G;
 
-wire [3:0] C_out_LCU;   // carry
-wire [3:0] P;
-wire [3:0] G;
+  wire [27:0] A_1; 
 
-wire [15:0] A_1;    // if C_in = 1, inverse of A
+  assign A_1 = C_in ? ~A : A;
+  assign C_out = C_in ? ~C_out_LCU[6] : C_out_LCU[6];
 
-//--------- assign A_1, C_out using C_in condition --------------
-assign A_1 = C_in ? ~A : A;
-assign C_out = C_in ? ~C_out_LCU[3] : C_out_LCU[3];
-//---------------------------------------------------------------
-
-CLG4 clg4(.C_in(C_in), .p(P), .g(G), .C_out(C_out_LCU));
-CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
-CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
-CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(C_out_LCU[2]), .p_g(P[2]), .g_g(G[2]), .of());
-CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(C_out_LCU[3]), .p_g(P[3]), .g_g(G[3]), .of(OF));
+  CLG4 clg4(.C_in(C_in), .p(P), .g(G), .C_out(C_out_LCU));
+  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
+  CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(C_out_LCU[2]), .p_g(P[2]), .g_g(G[2]), .of());
+  CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(C_out_LCU[3]), .p_g(P[3]), .g_g(G[3]), .of());
+  CLA4 cla4_4(.a(A_1[19:16]), .b(B[19:16]), .C_in(C_out_LCU[3]), .s(S[19:16]), .C_out(C_out_LCU[4]), .p_g(P[4]), .g_g(G[4]), .of());
+  CLA4 cla4_5(.a(A_1[23:20]), .b(B[23:20]), .C_in(C_out_LCU[4]), .s(S[23:20]), .C_out(C_out_LCU[5]), .p_g(P[5]), .g_g(G[5]), .of());
+  CLA4 cla4_6(.a(A_1[27:24]), .b(B[27:24]), .C_in(C_out_LCU[5]), .s(S[27:24]), .C_out(C_out_LCU[6]), .p_g(P[6]), .g_g(G[6]), .of());
 
 endmodule
-
 
 module CLG4
 (
@@ -337,11 +334,11 @@ module pe (
   ///////////////////////////////////////////////////////
   end
   // Stage 9: Add inputa*inputb and outputc
-  wire [15:0] temp;
-  wire [15:0] result_temp;
+  wire [27:0] temp;
+  wire [27:0] result_temp;
   assign result_temp = (f8_reg) ? 16'h0000: result;
-  CLA_16Bit u_cla_16bit (
-    .A(sum),
+  CLA_28Bit u_cla_128it (
+    .A({12'h000,sum}),
     .B(result_temp),
     .C_in(1'b0),
     .C_out(),
