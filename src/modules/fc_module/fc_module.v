@@ -893,6 +893,15 @@ module fc_module
           end
         end
         STATE_WRITE_RESULT: begin
+          tdata[7:0] <= pe_result1[27] ? (8'b0000_0000) : 
+                          ((pe_result1[26:12] == 15'b0_0000_0000_0000) ? {1'b0, pe_result1[12:6]} : 8'b0111_1111); 
+          tdata[14:8] <= pe_result2[27] ? (8'b0000_0000) : 
+                          ((pe_result2[26:12] == 15'b0_0000_0000_0000) ? {1'b0, pe_result2[12:6]} : 8'b0111_1111);
+          tdata[22:16] <= pe_result3[27] ? (8'b0000_0000) : 
+                          ((pe_result3[26:12] == 15'b0_0000_0000_0000) ? {1'b0, pe_result3[12:6]} : 8'b0111_1111);
+          tdata[30:24] <= pe_result4[27] ? (8'b0000_0000) : 
+                          ((pe_result4[26:12] == 15'b0_0000_0000_0000) ? {1'b0, pe_result4[12:6]} : 8'b0111_1111); 
+          state <= STATE_SEND_RESULT;
           
         end
         STATE_SEND_RESULT: begin
