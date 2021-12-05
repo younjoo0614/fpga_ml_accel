@@ -887,7 +887,7 @@ module fc_module
             else if (pe_delay[0] && !pe_delay[1]) pe_result2 <= pe_result2_temp;
             else if (!pe_delay[0] && pe_delay[1]) pe_result3 <= pe_result3_temp;
             else if (pe_delay[0] &&!pe_delay[1]) begin
-              pe_result4 <= pe_result4_temp[31:24];
+              pe_result4 <= pe_result4_temp;
               state <= STATE_SEND_RESULT;
             end
           end
