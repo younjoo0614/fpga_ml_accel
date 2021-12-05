@@ -19,7 +19,8 @@ module CLA_28Bit (
   assign A_1 = C_in ? ~A : A;
   assign C_out = C_in ? ~C_out_LCU[6] : C_out_LCU[6];
 
-  CLG4 clg4(.C_in(C_in), .p(P), .g(G), .C_out(C_out_LCU));
+  CLG4 clg4(.C_in(C_in), .p(P[3:0]), .g(G[3:0]), .C_out(C_out_LCU[3:0]));
+  CLG3 clg3(.C_in(C_out_LCU[3]),.p(P[6:4]), .g(G[6:4]), .C_out(C_out_LCU[6:4]));
   CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
   CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
   CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(C_out_LCU[2]), .p_g(P[2]), .g_g(G[2]), .of());
@@ -28,6 +29,30 @@ module CLA_28Bit (
   CLA4 cla4_5(.a(A_1[23:20]), .b(B[23:20]), .C_in(C_out_LCU[4]), .s(S[23:20]), .C_out(C_out_LCU[5]), .p_g(P[5]), .g_g(G[5]), .of());
   CLA4 cla4_6(.a(A_1[27:24]), .b(B[27:24]), .C_in(C_out_LCU[5]), .s(S[27:24]), .C_out(C_out_LCU[6]), .p_g(P[6]), .g_g(G[6]), .of());
 
+endmodule
+
+module CLA_16Bit (
+  input [15:0] A, 
+  input [15:0] B, 
+  input   C_in,     // if 0 --> add, 1 --> sub
+
+  output [15:0] S,
+  output  C_out
+);
+  wire [3:0] C_out_LCU;   // carry
+  wire [3:0] P;
+  wire [3:0] G;
+
+  wire [15:0] A_1; 
+
+  assign A_1 = C_in ? ~A : A;
+  assign C_out = C_in ? ~C_out_LCU[3] : C_out_LCU[3];
+
+  CLG4 clg4(.C_in(C_in), .p(P), .g(G), .C_out(C_out_LCU));
+  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
+  CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(C_out_LCU[2]), .p_g(P[2]), .g_g(G[2]), .of());
+  CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(C_out_LCU[3]), .p_g(P[3]), .g_g(G[3]), .of());
 endmodule
 
 module CLG4
@@ -44,6 +69,23 @@ assign C_out[0] = g[0] | (p[0] & C_in);
 assign C_out[1] = g[1] | (p[1] & C_out[0]);
 assign C_out[2] = g[2] | (p[2] & C_out[1]);
 assign C_out[3] = g[3] | (p[3] & C_out[2]);
+//--------------------------------------------------------------
+
+endmodule
+
+module CLG3
+(
+  input C_in,
+  input [2:0] p, 
+  input [2:0] g,
+
+  output [2:0] C_out
+);
+
+//-------- assign carry out ------------------------------------
+assign C_out[0] = g[0] | (p[0] & C_in);
+assign C_out[1] = g[1] | (p[1] & C_out[0]);
+assign C_out[2] = g[2] | (p[2] & C_out[1]);
 //--------------------------------------------------------------
 
 endmodule
@@ -102,7 +144,7 @@ module pe (
   input            first,
   input              clk,
   output wire [7:0] out_a, out_b,
-  output reg  [15:0] result,
+  output reg  [27:0] result,
   output wire of
   );  
   
@@ -335,14 +377,14 @@ module pe (
   // Stage 9: Add inputa*inputb and outputc
   wire [27:0] temp;
   wire [27:0] result_temp;
-  assign result_temp = (f8_reg) ? 16'h0000: result;
+  assign result_temp = (f8_reg) ? 28'h0000000: result;
+
   CLA_28Bit u_cla_28bit (
     .A({12'h000,sum}),
     .B(result_temp),
     .C_in(1'b0),
     .C_out(),
-    .S(temp),
-    .OF(of)
+    .S(temp)
   );
   always @(posedge clk) begin
     if (en) begin
@@ -377,6 +419,7 @@ module fc_module
     // TODO : Add ports as you need
     //////////////////////////////////////////////////////////////////////////
     input wire [2:0] command,
+    input wire fc_start,
     input wire [20:0] size,
     // output wire [31:0] FEAT_SIZE, BIAS_SIZE, WEIGHT_SIZE,
 
@@ -425,7 +468,7 @@ module fc_module
   assign din = S_AXIS_TDATA;
 
   reg [31:0] tdata;
-  reg [27:0] pe_result1, pe_result2, pe_result3, pe_result4;
+  reg [27:0] bias_add_result1, bias_add_result2, bias_add_result3, bias_add_result4;
   wire [27:0] pe_result1_temp, pe_result2_temp, pe_result3_temp, pe_result4_temp;
   wire [7:0] a12, a23, a34;
   reg [1:0] delay;
@@ -435,54 +478,56 @@ module fc_module
   reg [31:0] weight1, weight2, weight3, weight4, pre_weight2, pre_weight3, pre_weight4, feat , bias;
   reg [7:0] p1_a, p1_b, p2_b, p3_b, p4_b;
   reg f_receive_done, b_receive_done, w_receive_done;
+  reg [3:0] pe_delay;
+  wire [31:0] w1_dout, w2_dout, w3_dout, w4_dout;
 
   assign F_writedone = f_receive_done;
   assign B_writedone = b_receive_done;
   assign W_writedone = w_receive_done;
 
   sram_32x1024 weight1_sram_32x1024(
-  .addr(w1_addr[9:0]),
-  .clk(clk),
-  .din(din),
-  .dout(w1_dout),
-  .bram_en(w1_bram_en),
-  .we(w1_we)
+  .addra(w1_addr[9:0]),
+  .clka(clk),
+  .dina(din),
+  .douta(w1_dout),
+  .ena(w1_bram_en),
+  .wea(w1_we)
   );
 
   sram_32x1024 weight2_sram_32x1024(
-  .addr(w2_addr[9:0]),
-  .clk(clk),
-  .din(din),
-  .dout(w2_dout),
-  .bram_en(w2_bram_en),
-  .we(w2_we)
+  .addra(w2_addr[9:0]),
+  .clka(clk),
+  .dina(din),
+  .douta(w2_dout),
+  .ena(w2_bram_en),
+  .wea(w2_we)
   );
 
   sram_32x1024 weight3_sram_32x1024(
-  .addr(w3_addr[9:0]),
-  .clk(clk),
-  .din(din),
-  .dout(w3_dout),
-  .bram_en(w3_bram_en),
-  .we(w3_we)
+  .addra(w3_addr[9:0]),
+  .clka(clk),
+  .dina(din),
+  .douta(w3_dout),
+  .ena(w3_bram_en),
+  .wea(w3_we)
   );
 
   sram_32x1024 weight4_sram_32x1024(
-  .addr(w4_addr[9:0]),
-  .clk(clk),
-  .din(din),
-  .dout(w4_dout),
-  .bram_en(w4_bram_en),
-  .we(w4_we)
+  .addra(w4_addr[9:0]),
+  .clka(clk),
+  .dina(din),
+  .douta(w4_dout),
+  .ena(w4_bram_en),
+  .wea(w4_we)
   );
 
   sram_32x1024 feat_sram_32x1024(
-  .addr(fb_addr),
-  .clk(clk),
-  .din(din),
-  .dout(f_dout),
-  .bram_en(f_bram_en),
-  .we(f_we)
+  .addra(fb_addr),
+  .clka(clk),
+  .dina(din),
+  .douta(f_dout),
+  .ena(f_bram_en),
+  .wea(f_we)
   );
 
   pe pe1 (
@@ -544,31 +589,50 @@ module fc_module
 
   reg [5:0] cnt_4;
 
-  wire [15:0] next_faddr, next_waddr, next_baddr;
+  wire [15:0] next_faddr, next_w1addr,next_w2addr,next_w3addr,next_w4addr, next_baddr;
   CLA_16Bit faddr_adder (
-    .A({6'h00,f_addr}),
+    .A({6'h00,f_addr[9:0]}),
     .B(16'h0001),
     .C_in(1'b1),
     .S(next_faddr),
-    .C_out(),
-    .OF()
+    .C_out()
   );
 
-  CLA_16Bit waddr_adder (
-    .A({6'h00,w_addr}),
+  CLA_16Bit w1addr_adder (
+    .A({6'h00,w1_addr[9:0]}),
     .B(16'h0001),
     .C_in(1'b1),
-    .S(next_waddr),
-    .C_out(),
-    .OF()
+    .S(next_w1addr),
+    .C_out()
   );
+  CLA_16Bit w2addr_adder (
+    .A({6'h00, w2_addr[9:0]}),
+    .B(16'h0001),
+    .C_in(1'b1),
+    .S(next_w2addr),
+    .C_out()
+  );
+  CLA_16Bit w3addr_adder (
+    .A({6'h00,w3_addr[9:0]}),
+    .B(16'h0001),
+    .C_in(1'b1),
+    .S(next_w3addr),
+    .C_out()
+  );
+  CLA_16Bit w4addr_adder (
+    .A({6'h00,w4_addr[9:0]}),
+    .B(16'h0001),
+    .C_in(1'b1),
+    .S(next_w4addr),
+    .C_out()
+  );
+
   CLA_16Bit baddr_adder (
-    .A({6'h00,b_addr}),
+    .A({6'h00,b_addr[9:0]}),
     .B(16'h0001),
     .C_in(1'b1),
     .S(next_baddr),
-    .C_out(),
-    .OF()
+    .C_out()
   );
 
   // control path
@@ -589,28 +653,31 @@ module fc_module
     else begin
       case (state)
         STATE_IDLE: begin
-          if (command[0]) begin
-            state <= STATE_RECEIVE_FEATURE;
-            s_axis_tready <= 1'b1;
-            f_bram_en <= 1'b1;
-            f_we <= 1'b1;
-          end
-          else if (command[1]) begin
-            state <= STATE_RECEIVE_BIAS;
-            s_axis_tready <= 1'b1;
-            b_addr <= 11'h200;
-            f_bram_en <= 1'b1;
-            f_we <= 1'b1;
-          end
-          else if (command[2]) begin
-            state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
-            s_axis_tready <= 1'b1;
-            w1_bram_en <= 1'b1;
-            w1_we <= 1'b1;
-
-            f_addr <= 11'b0;
-            b_addr <= 11'h200;
-          end
+          fc_done <= 1'b0;
+          if (fc_start) begin
+            if (command[0]) begin
+              state <= STATE_RECEIVE_FEATURE;
+              s_axis_tready <= 1'b1;
+              f_bram_en <= 1'b1;
+              f_we <= 1'b1;
+              feat_size <= size[10:0];
+            end
+            else if ( command[1]) begin
+              state <= STATE_RECEIVE_BIAS;
+              s_axis_tready <= 1'b1;
+              b_addr <= 11'h200;
+              f_bram_en <= 1'b1;
+              f_we <= 1'b1;
+            end
+            else if ( command[2]) begin
+              state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
+              s_axis_tready <= 1'b1;
+              w1_bram_en <= 1'b1;
+              w1_we <= 1'b1;
+              f_addr <= 11'b0;
+              b_addr <= 11'h200;
+            end
+          end          
           else s_axis_tready <= 1'b0;
         end
         STATE_RECEIVE_FEATURE: begin
@@ -653,7 +720,7 @@ module fc_module
           end
           else if (weight_n == 2'b10) begin
             if (w3_bram_en && w3_we) begin
-              if (weight_cnt >= feat_size/4 - 1) begin
+              if (weight_cnt >= feat_size>>2 - 1) begin
                 w3_bram_en <= 1'b0;
                 w3_we <= 1'b0;
                 w4_bram_en <= 1'b1;
@@ -663,7 +730,7 @@ module fc_module
           end
           else if (weight_n == 2'b11) begin
             if (w4_bram_en && w4_we) begin
-              if (weight_cnt >= feat_size/4 - 1) begin
+              if (weight_cnt >= feat_size>>2 - 1) begin
                 w4_bram_en <= 1'b0;
                 w4_we <= 1'b0;
                 w1_bram_en <= 1'b1;
@@ -672,7 +739,7 @@ module fc_module
             end
           end
           if (w4_addr[9:0] >= 10'd1023 || (!feat_size[10] && S_AXIS_TLAST)) begin
-            state <= STATE_READ_BIAS;
+            state <= STATE_PSUM;
             w1_bram_en <= 1'b0;
             w1_we <= 1'b0;
             w2_bram_en <= 1'b0;
@@ -706,27 +773,45 @@ module fc_module
           w3_bram_en <= 1'b1;
           w4_bram_en <= 1'b1;
           if (delay[1]) begin            
-            if (feat_size[10] && f_addr[10]) state <= STATE_WRITE_RESULT;
-            else if (feat_size[8] && f_addr[8]) state <= STATE_WRITE_RESULT;
-            else if (feat_size[6] && f_addr[6]) state <= STATE_WRITE_RESULT;
+            if (feat_size[10] && f_addr[10]) state <= STATE_READ_BIAS;
+            else if (feat_size[8] && f_addr[8]) state <= STATE_READ_BIAS;
+            else if (feat_size[6] && f_addr[6]) state <= STATE_READ_BIAS;
             else state <= STATE_COMPUTE;
           end
         end
         STATE_WRITE_RESULT: begin
-          
+          state <= STATE_SEND_RESULT;
         end
         STATE_ADD_BIAS: begin
           f_bram_en <= 1'b0;
+          if (pe_delay[3]) state <= STATE_WRITE_RESULT;
         end
         STATE_SEND_RESULT: begin
           m_axis_tvalid <= 1'b1;
           state <= STATE_COMPUTE;
+          if (b_addr[9] && b_addr[8]) begin
+            m_axis_tlast <= 1'b1;
+            fc_done <= 1'b1;
+            state <= STATE_IDLE;
+          end
         end
       endcase
     end
   end
  
-  reg [3:0] pe_delay;
+ reg [27:0] bias_temp, pe_result;
+ wire [27:0] bias_add_result;
+ reg [2:0] bias_add_delay;
+
+ CLA_28Bit u_bias_add(
+   .A(pe_result),
+   .B(bias_temp),
+   .C_in(1'b0),
+   .S(bias_add_result),
+   .C_out()
+ );
+
+  
   // data path
   always @(posedge clk) begin
     if (!rstn) begin
@@ -775,14 +860,17 @@ module fc_module
           end
         end
         STATE_RECEIVE_BIAS: begin
-          f_addr <= f_addr + 1;
+          b_addr <= next_baddr;
+          if (S_AXIS_TLAST) begin
+            b_receive_done <= 1'b1;
+          end
         end
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
           if (weight_n == 2'b00) begin
             if (w1_bram_en && w1_we) begin
-              w1_addr <= w1_addr + 1;
+              w1_addr <= next_w1addr;
               weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size/4 - 1) begin
+              if (weight_cnt >= feat_size>>2 - 1) begin
                 weight_cnt <= 8'b0;
                 weight_n <= 2'b01;
               end
@@ -790,9 +878,9 @@ module fc_module
           end
           else if (weight_n == 2'b01) begin
             if (w2_bram_en && w2_we) begin
-              w2_addr <= w2_addr + 1;
+              w2_addr <= next_w2addr;
               weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size/4 - 1) begin
+              if (weight_cnt >= feat_size>>2 - 1) begin
                 weight_cnt <= 8'b0;
                 weight_n <= 2'b01;
               end
@@ -800,9 +888,9 @@ module fc_module
           end
           else if (weight_n == 2'b10) begin
             if (w3_bram_en && w3_we) begin
-              w3_addr <= w3_addr + 1;
+              w3_addr <= next_w3addr;
               weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size/4 - 1) begin
+              if (weight_cnt >= feat_size>>2 - 1) begin
                 weight_cnt <= 8'b0;
                 weight_n <= 2'b01;
               end
@@ -810,41 +898,39 @@ module fc_module
           end
           else if (weight_n == 2'b11) begin
             if (w4_bram_en && w4_we) begin
-              w4_addr <= w4_addr + 1;
+              w4_addr <= next_w4addr;
               weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size/4 - 1) begin
+              if (weight_cnt >= feat_size>>2 - 1) begin
                 weight_cnt <= 8'b0;
                 weight_n <= 2'b01;
               end
             end
           end
-          if (w4_addr[9:0] >= 10'd1023 || (!feat_size[10] && S_AXIS_TLAST)) begin
-            weight_cnt <= 8'b0;
+          if (w4_addr[10] || (!feat_size[10] && S_AXIS_TLAST)) begin
+            weight_cnt <= 8'h00;
             w_receive_done <= 1'b1;
           end
         end
-        STATE_READ_BIAS: begin
-          if(delay == 2'b00) begin
+        STATE_READ_BIAS: begin 
+          if (delay == 2'b00) begin
             b_addr <= next_baddr ;
             fb_addr <= b_addr;
-            delay <= delay + 1;
+            delay <= delay +1;
           end
-          else if (!delay[1]) begin
-            delay <= delay + 1;
-          end
+          else if (!delay[1]) delay <= delay +1;
           else begin
             bias <= f_dout;
-          end
+          end          
         end
         STATE_COMPUTE: begin          
           cnt_4 = cnt_4 +1;
           if (cnt_4[2]) begin //4개 연산할 때마다  
             cnt_4 <= 3'b000;
             f_addr <= next_faddr;
-            w1_addr <= next_waddr;
-            w2_addr <= next_waddr;
-            w3_addr <= next_waddr;
-            w4_addr <= next_waddr;
+            w1_addr <= next_w1addr;
+            w2_addr <= next_w2addr;
+            w3_addr <= next_w3addr;
+            w4_addr <= next_w4addr;
             pre_weight2 <= weight2;
             pre_weight3 <= weight3;
             pre_weight4 <= weight4;
@@ -952,18 +1038,39 @@ module fc_module
         STATE_ADD_BIAS: begin 
           pe_delay <= pe_delay + 1;
           if (pe_delay[2]) begin
-            if (!pe_delay[0] &&!pe_delay[1]) pe_result1 <= pe_result1_temp;
-            else if (pe_delay[0] && !pe_delay[1]) pe_result2 <= pe_result2_temp;
-            else if (!pe_delay[0] && pe_delay[1]) pe_result3 <= pe_result3_temp;
-            else if (pe_delay[0] &&!pe_delay[1]) begin
-              pe_result4 <= pe_result4_temp;
+            if (!pe_delay[0] &&!pe_delay[1]) begin
+              pe_result <= pe_result1_temp;
+              bias_temp <= bias[7:0];              
+            end
+            else if (pe_delay[0] && !pe_delay[1]) begin
+              pe_result <= pe_result2_temp;
+              bias_temp <= bias[15:8];
+              bias_add_result1 <= bias_add_result;
+            end
+            else if (!pe_delay[0] && pe_delay[1]) begin
+              pe_result <= pe_result3_temp;
+              bias_temp <= bias[23:16];
+              bias_add_result2 <= bias_add_result;
+            end
+            else if (pe_delay[0] &&pe_delay[1]) begin
+              pe_result <= pe_result4_temp;
+              bias_temp <= bias[31:24];
               state <= STATE_SEND_RESULT;
+              bias_add_result3 <= bias_add_result;
             end
           end
+          else if (pe_delay[3]) bias_add_result4 <= bias_add_result;
         end
 
         STATE_WRITE_RESULT: begin
-          
+          tdata[7:0] <= bias_add_result1[27] ? (8'b0000_0000) : 
+                          ((bias_add_result1[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result1[12:6]} : 8'b0111_1111); 
+          tdata[14:8] <= bias_add_result2[27] ? (8'b0000_0000) : 
+                          ((bias_add_result2[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result2[12:6]} : 8'b0111_1111);
+          tdata[22:16] <= bias_add_result3[27] ? (8'b0000_0000) : 
+                          ((bias_add_result3[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result3[12:6]} : 8'b0111_1111);
+          tdata[30:24] <= bias_add_result4[27] ? (8'b0000_0000) : 
+                          ((bias_add_result4[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);   
         end
         STATE_SEND_RESULT: begin
           m_axis_tdata <= tdata;
