@@ -432,7 +432,7 @@ module fc_module
   reg f_bram_en, w1_bram_en, w2_bram_en, w3_bram_en, w4_bram_en;
   reg first1, first2, first3, first4;
   reg pe_1_en, pe_2_en, pe_3_en, pe_4_en;
-  reg [31:0] weight1, weight2, weight3, weight4, pre_weight2, pre_weight3, pre_weight4, feat;
+  reg [31:0] weight1, weight2, weight3, weight4, pre_weight2, pre_weight3, pre_weight4, feat , bias;
   reg [7:0] p1_a, p1_b, p2_b, p3_b, p4_b;
   reg f_receive_done, b_receive_done, w_receive_done;
 
@@ -544,6 +544,33 @@ module fc_module
 
   reg [5:0] cnt_4;
 
+  wire [15:0] next_faddr, next_waddr, next_baddr;
+  CLA_16Bit faddr_adder (
+    .A({6'h00,f_addr}),
+    .B(16'h0001),
+    .C_in(1'b1),
+    .S(next_faddr),
+    .C_out(),
+    .OF()
+  );
+
+  CLA_16Bit waddr_adder (
+    .A({6'h00,w_addr}),
+    .B(16'h0001),
+    .C_in(1'b1),
+    .S(next_waddr),
+    .C_out(),
+    .OF()
+  );
+  CLA_16Bit baddr_adder (
+    .A({6'h00,b_addr}),
+    .B(16'h0001),
+    .C_in(1'b1),
+    .S(next_baddr),
+    .C_out(),
+    .OF()
+  );
+
   // control path
   always @(posedge clk) begin
     if (!rstn) begin
@@ -577,7 +604,7 @@ module fc_module
           else if (command[1]) begin
             state <= STATE_RECEIVE_BIAS;
             s_axis_tready <= 1'b1;
-            f_addr <= 11'h200;
+            b_addr <= 11'h200;
             f_bram_en <= 1'b1;
             f_we <= 1'b1;
           end
@@ -591,11 +618,16 @@ module fc_module
             weight_n <= 2'b0;
             w1_bram_en <= 1'b1;
             w1_we <= 1'b1;
+
+            f_addr <= 11'b0;
+            b_addr <= 11'h200;
+
           end
           else s_axis_tready <= 1'b0;
         end
         STATE_RECEIVE_FEATURE: begin
-          f_addr <= f_addr + 1;
+          f_addr <= next_faddr;
+          fb_addr <= f_addr;
           if (S_AXIS_TLAST) begin
             s_axis_tready <= 1'b0;
             state <= STATE_IDLE;
@@ -605,7 +637,8 @@ module fc_module
           end
         end
         STATE_RECEIVE_BIAS: begin
-          f_addr <= f_addr + 1;
+          b_addr <= next_baddr;
+          fb_addr<= b_addr;
           if (S_AXIS_TLAST) begin
             s_axis_tready <= 1'b0;
             state <= STATE_IDLE;
@@ -690,7 +723,7 @@ module fc_module
           end
         end
 
-        STATE_READ_BIAS: begin //mark
+        STATE_READ_BIAS: begin 
           state <= STATE_PSUM;
         end
         STATE_COMPUTE: begin
@@ -723,24 +756,7 @@ module fc_module
     end
   end
 
-  wire [15:0] next_faddr, next_waddr;
-  CLA_16Bit faddr_adder (
-    .A({6'h00,f_addr}),
-    .B(16'h0001),
-    .C_in(1'b1),
-    .S(next_faddr),
-    .C_out(),
-    .OF()
-  );
-
-  CLA_16Bit waddr_adder (
-    .A({6'h00,w_addr}),
-    .B(16'h0001),
-    .C_in(1'b1),
-    .S(next_waddr),
-    .C_out(),
-    .OF()
-  );
+ 
  
   reg [3:0] pe_delay;
   // data path
@@ -748,7 +764,7 @@ module fc_module
     if (!rstn) begin
       fb_addr <= 9'h000;
       f_addr <=  10'h000;
-      b_addr <= 10'h000;
+      b_addr <= 10'h200;
       w1_addr <= 10'h000;
       w2_addr <= 10'h000;
       w3_addr <= 10'h000;
@@ -774,8 +790,10 @@ module fc_module
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
           
         end
-        STATE_READ_BIAS: begin  // mark
-          
+        STATE_READ_BIAS: begin 
+          b_addr <= next_baddr ;
+          fb_addr <= b_addr;
+          bias <= f_dout;
         end
         STATE_COMPUTE: begin
           m_axis_tvalid <= 1'b0;
@@ -891,6 +909,7 @@ module fc_module
             weight2 <= w2_dout;
             weight3 <= w3_dout;
             weight4 <= w4_dout;
+            fb_addr <= f_addr;
             feat <= f_dout;
           end
         end
