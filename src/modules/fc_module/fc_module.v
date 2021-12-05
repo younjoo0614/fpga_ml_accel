@@ -395,8 +395,8 @@ module fc_module
   STATE_COMPUTE = 4'd5,
   STATE_PSUM = 4'd6,
   STATE_ADD_BIAS = 4'd7,
-  STATE_WRITE_RESULT = 4'd7,
-  STATE_SEND_RESULT = 4'd8;
+  STATE_WRITE_RESULT = 4'd8,
+  STATE_SEND_RESULT = 4'd9;
   
   reg [3:0] state;
   
@@ -428,7 +428,8 @@ module fc_module
   assign din = S_AXIS_TDATA;
 
   reg [31:0] tdata;
-  wire [31:0] tdata_temp;
+  reg [27:0] pe_result1, pe_result2, pe_result3, pe_result4;
+  wire [27:0] pe_result1_temp, pe_result2_temp, pe_result3_temp, pe_result4_temp;
   wire [7:0] a12, a23, a34;
   reg [1:0] delay;
   reg f_bram_en, w1_bram_en, w2_bram_en, w3_bram_en, w4_bram_en;
@@ -494,7 +495,7 @@ module fc_module
     .B(p1_b),
     .out_a(a12),
     .out_b(),
-    .result(tdata_temp[7:0]),
+    .result(pe_result1_temp),
     .first(first1),
     .of()
   );
@@ -506,7 +507,7 @@ module fc_module
     .B(p2_b),
     .out_a(a23),
     .out_b(),
-    .result(tdata_temp[15:8]),
+    .result(pe_result2_temp),
     .first(first2),
     .of()
   );
@@ -518,7 +519,7 @@ module fc_module
     .B(p3_b),
     .out_a(a34),
     .out_b(),
-    .result(tdata_temp[23:16]),
+    .result(pe_result3_temp),
     .first(first3),
     .of()
   );
@@ -530,7 +531,7 @@ module fc_module
     .B(p4_b),
     .out_a(),
     .out_b(),
-    .result(tdata_temp[31:24]),
+    .result(pe_result4_temp),
     .first(first4),
     .of()
   );
@@ -882,17 +883,20 @@ module fc_module
             feat <= f_dout;
           end
         end
-        STATE_WRITE_RESULT: begin
+        STATE_ADD_BIAS: begin
           pe_delay <= pe_delay + 1;
           if (pe_delay[2]) begin
-            if (!pe_delay[0] &&!pe_delay[1] )tdata[7:0] <= tdata_temp[7:0];
-            else if (pe_delay[0] && !pe_delay[1]) tdata[15:8] <= tdata_temp[15:8];
-            else if (!pe_delay[0] && pe_delay[1]) tdata[23:16] <= tdata_temp[23:16];
+            if (!pe_delay[0] &&!pe_delay[1]) pe_result1 <= pe_result1_temp;
+            else if (pe_delay[0] && !pe_delay[1]) pe_result2 <= pe_result2_temp;
+            else if (!pe_delay[0] && pe_delay[1]) pe_result3 <= pe_result3_temp;
             else if (pe_delay[0] &&!pe_delay[1]) begin
-              tdata[31:24] <= tdata_temp[31:24];
+              pe_result4 <= pe_result4_temp[31:24];
               state <= STATE_SEND_RESULT;
             end
           end
+        end
+        STATE_WRITE_RESULT: begin
+          
         end
         STATE_SEND_RESULT: begin
           m_axis_tvalid <= 1'b1;
