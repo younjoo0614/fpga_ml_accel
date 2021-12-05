@@ -239,8 +239,7 @@ module pe (
       f3_reg <= f2_reg;
     end                        
   end
-  
-  
+
   // Stage 4: Add LSBs, shift bits two times.
   ///////////////////////////////////////////////////////
     // TODO: insert value to each lsb_sum4x using "sum3x_reg"
@@ -337,7 +336,7 @@ module pe (
   wire [27:0] temp;
   wire [27:0] result_temp;
   assign result_temp = (f8_reg) ? 16'h0000: result;
-  CLA_28Bit u_cla_128it (
+  CLA_28Bit u_cla_28bit (
     .A({12'h000,sum}),
     .B(result_temp),
     .C_in(1'b0),
@@ -614,6 +613,7 @@ module fc_module
             f_we <= 1'b0;
           end
         end
+
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
           if (weight_n == 2'b00) begin
             if (w1_bram_en && w1_we) begin
@@ -684,10 +684,12 @@ module fc_module
             w4_bram_en <= 1'b0;
             w4_we <= 1'b0;
             s_axis_tready <= 1'b0;
+            f_bram_en<=1'b1;
             state <= STATE_READ_BIAS;
           end
         end
-        STATE_READ_BIAS: begin
+
+        STATE_READ_BIAS: begin //mark
           state <= STATE_PSUM;
         end
         STATE_COMPUTE: begin
@@ -702,6 +704,11 @@ module fc_module
             else state <= STATE_COMPUTE;
           end
         end
+
+        STATE_ADD_BIAS: begin
+          
+        end
+
         STATE_WRITE_RESULT: begin
           
         end
@@ -761,7 +768,7 @@ module fc_module
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
           
         end
-        STATE_READ_BIAS: begin
+        STATE_READ_BIAS: begin  // mark
           
         end
         STATE_COMPUTE: begin
@@ -880,7 +887,8 @@ module fc_module
             feat <= f_dout;
           end
         end
-        STATE_ADD_BIAS: begin
+
+        STATE_ADD_BIAS: begin 
           pe_delay <= pe_delay + 1;
           if (pe_delay[2]) begin
             if (!pe_delay[0] &&!pe_delay[1]) pe_result1 <= pe_result1_temp;
@@ -892,6 +900,7 @@ module fc_module
             end
           end
         end
+
         STATE_WRITE_RESULT: begin
           
         end
