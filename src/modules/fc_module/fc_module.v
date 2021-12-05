@@ -426,7 +426,8 @@ module fc_module
 
   assign din = S_AXIS_TDATA;
 
-  reg [31:0] tdata, tdata_temp;
+  reg [31:0] tdata;
+  wire [31:0] tdata_temp;
   wire [7:0] a12, a23, a34;
   reg [1:0] delay;
   reg f_bram_en, w1_bram_en, w2_bram_en, w3_bram_en, w4_bram_en;
@@ -486,7 +487,7 @@ module fc_module
     .en(pe_1_en),
     .A(p1_a),
     .B(p1_b),
-    .out_A(a12),
+    .out_a(a12),
     .out_b(),
     .result(tdata_temp[7:0]),
     .first(first1),
@@ -708,7 +709,7 @@ module fc_module
     end
   end
 
-  reg [15:0] next_faddr, next_waddr;
+  wire [15:0] next_faddr, next_waddr;
   CLA_16Bit faddr_adder (
     .A({6'h00,f_addr}),
     .B(16'h0001),
