@@ -824,10 +824,18 @@ module fc_module
             w_receive_done <= 1'b1;
           end
         end
-        STATE_READ_BIAS: begin 
-          b_addr <= next_baddr ;
-          fb_addr <= b_addr;
-          bias <= f_dout;
+        STATE_READ_BIAS: begin
+          if(delay == 2'b00) begin
+            b_addr <= next_baddr ;
+            fb_addr <= b_addr;
+            delay <= delay + 1;
+          end
+          else if (!delay[1]) begin
+            delay <= delay + 1;
+          end
+          else begin
+            bias <= f_dout;
+          end
         end
         STATE_COMPUTE: begin          
           cnt_4 = cnt_4 +1;
