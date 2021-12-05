@@ -381,8 +381,8 @@ module fc_module
     // TODO : Add ports as you need
     //////////////////////////////////////////////////////////////////////////
     input wire [2:0] command,
-    input wire[20:0] size,
-    output wire [31:0] FEAT_SIZE, BIAS_SIZE, WEIGHT_SIZE,
+    input wire [20:0] size,
+    // output wire [31:0] FEAT_SIZE, BIAS_SIZE, WEIGHT_SIZE,
     output wire FC_DONE
   ); 
 
@@ -416,10 +416,16 @@ module fc_module
   ////////////////////////////////////////////////////////////////////////////
   // TODO : Write your code here
   ////////////////////////////////////////////////////////////////////////////
-  reg[10:0] w_addr, f_addr;
-  reg bram_en, w1_we, w2_we, w3_we, w4_we, f_we;
-  wire [31:0] w1_dout, w2_dout, w3_dout, w4_dout, f_dout;
-  reg [31:0] din;
+  reg [10:0] f_addr, w1_addr, w2_addr, w3_addr, w4_addr;
+  reg w1_we, w2_we, w3_we, w4_we, f_we;
+  reg [1:0] weight_n;
+  reg [7:0] weight_cnt;
+  wire [31:0] w_dout, f_dout;
+  // reg [31:0] din;
+  wire [31:0] din;
+
+  assign din = S_AXIS_TDATA;
+
   reg [31:0] tdata, tdata_temp;
   wire [7:0] a12, a23, a34;
   reg [1:0] delay;
@@ -428,39 +434,40 @@ module fc_module
   reg pe_1_en, pe_2_en, pe_3_en, pe_4_en;
   reg [31:0] weight1, weight2, weight3, weight4, pre_weight2, pre_weight3, pre_weight4, feat;
   reg [7:0] p1_a, p1_b, p2_b, p3_b, p4_b;
+  reg f_receive_done, b_receive_done, w_receive_done;
 
   sram_32x1024 weight1_sram_32x1024(
-  .addra(w_addr[9:0]),
+  .addra(w1_addr[9:0]),
   .clka(clk),
   .dina(din),
-  .douta(w_dout),
+  .douta(w1_dout),
   .ena(w1_bram_en),
   .wea(w1_we)
   );
 
   sram_32x1024 weight2_sram_32x1024(
-  .addra(w_addr[9:0]),
+  .addra(w2_addr[9:0]),
   .clka(clk),
   .dina(din),
-  .douta(w_dout),
+  .douta(w2_dout),
   .ena(w2_bram_en),
   .wea(w2_we)
   );
 
   sram_32x1024 weight3_sram_32x1024(
-  .addra(w_addr[9:0]),
+  .addra(w3_addr[9:0]),
   .clka(clk),
   .dina(din),
-  .douta(w_dout),
+  .douta(w3_dout),
   .ena(w3_bram_en),
   .wea(w3_we)
   );
 
   sram_32x1024 weight4_sram_32x1024(
-  .addra(w_addr[9:0]),
+  .addra(w4_addr[9:0]),
   .clka(clk),
   .dina(din),
-  .douta(w_dout),
+  .douta(w4_dout),
   .ena(w4_bram_en),
   .wea(w4_we)
   );
@@ -522,12 +529,13 @@ module fc_module
     .of()
   );
 
-  reg [31:0] feat_size, bias_size, weight_size;
+  // reg [31:0] feat_size, bias_size, weight_size;
+  reg [10:0] feat_size;
   reg fc_done;
 
-  assign FEAT_SIZE = feat_size;
-  assign BIAS_SIZE = bias_size;
-  assign WEIGHT_SIZE = weight_size;
+  // assign FEAT_SIZE = feat_size;
+  // assign BIAS_SIZE = bias_size;
+  // assign WEIGHT_SIZE = weight_size;
   assign FC_DONE = fc_done;
 
   reg [5:0] cnt_4;
@@ -536,46 +544,147 @@ module fc_module
   always @(posedge clk) begin
     if (!rstn) begin
       state <= STATE_IDLE;
+      f_we <= 1'b0;
+      w1_we <= 1'b0;
+      w2_we <= 1'b0;
+      w3_we <= 1'b0;
+      w4_we <= 1'b0;
+      f_bram_en <= 1'b0;
+      w1_bram_en <= 1'b0;
+      w2_bram_en <= 1'b0;
+      w3_bram_en <= 1'b0;
+      w4_bram_en <= 1'b0;
     end
     else begin
       case (state)
         STATE_IDLE: begin
-          s_axis_tready <= 1'b0;
+          delay <= 1'b0;
+          f_receive_done <= 1'b0;
+          b_receive_done <= 1'b0;
+          w_receive_done <= 1'b0;
           if (command[0]) begin
             state <= STATE_RECEIVE_FEATURE;
+            feat_size <= size[10:0];
             s_axis_tready <= 1'b1;
+            f_bram_en <= 1'b1;
+            f_we <= 1'b1;
+            f_addr <= 11'b0;
           end
           else if (command[1]) begin
             state <= STATE_RECEIVE_BIAS;
             s_axis_tready <= 1'b1;
+            f_addr <= 11'h200;
+            f_bram_en <= 1'b1;
+            f_we <= 1'b1;
           end
           else if (command[2]) begin
             state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
             s_axis_tready <= 1'b1;
+            w1_addr <= 11'b0;
+            w2_addr <= 11'b0;
+            w3_addr <= 11'b0;
+            w4_addr <= 11'b0;
+            weight_n <= 2'b0;
+            w1_bram_en <= 1'b1;
+            w1_we <= 1'b1;
           end
+          else s_axis_tready <= 1'b0;
         end
         STATE_RECEIVE_FEATURE: begin
-          f_we <= 1'b1;
-          if (f_we) begin
-            if (size[11]) begin
-              
-            end
-            else if (size[9]) begin
-              
-            end
-            else begin
-              
-            end
+          f_addr <= f_addr + 1;
+          if (S_AXIS_TLAST) begin
+            s_axis_tready <= 1'b0;
+            state <= STATE_IDLE;
+            f_receive_done <= 1'b1;
+            f_bram_en <= 1'b0;
+            f_we <= 1'b0;
           end
         end
         STATE_RECEIVE_BIAS: begin
-          
+          f_addr <= f_addr + 1;
+          if (S_AXIS_TLAST) begin
+            s_axis_tready <= 1'b0;
+            state <= STATE_IDLE;
+            f_receive_done <= 1'b1;
+            f_bram_en <= 1'b0;
+            f_we <= 1'b0;
+          end
         end
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
-          
+          if (weight_n == 2'b00) begin
+            if (w1_bram_en && w1_we) begin
+              w1_addr <= w1_addr + 1;
+              weight_cnt <= weight_cnt + 1;
+              if (weight_cnt >= feat_size/4 - 1) begin
+                weight_cnt <= 8'b0;
+                weight_n <= 2'b01;
+                w1_bram_en <= 1'b0;
+                w1_we <= 1'b0;
+                w2_bram_en <= 1'b1;
+                w2_we <= 1'b1;
+              end
+            end
+          end
+          else if (weight_n == 2'b01) begin
+            if (w2_bram_en && w2_we) begin
+              w2_addr <= w2_addr + 1;
+              weight_cnt <= weight_cnt + 1;
+              if (weight_cnt >= feat_size/4 - 1) begin
+                weight_cnt <= 8'b0;
+                weight_n <= 2'b01;
+                w2_bram_en <= 1'b0;
+                w2_we <= 1'b0;
+                w3_bram_en <= 1'b1;
+                w3_we <= 1'b1;
+              end
+            end
+          end
+          else if (weight_n == 2'b10) begin
+            if (w3_bram_en && w3_we) begin
+              w3_addr <= w3_addr + 1;
+              weight_cnt <= weight_cnt + 1;
+              if (weight_cnt >= feat_size/4 - 1) begin
+                weight_cnt <= 8'b0;
+                weight_n <= 2'b01;
+                w3_bram_en <= 1'b0;
+                w3_we <= 1'b0;
+                w4_bram_en <= 1'b1;
+                w4_we <= 1'b1;
+              end
+            end
+          end
+          else if (weight_n == 2'b11) begin
+            if (w4_bram_en && w4_we) begin
+              w4_addr <= w4_addr + 1;
+              weight_cnt <= weight_cnt + 1;
+              if (weight_cnt >= feat_size/4 - 1) begin
+                weight_cnt <= 8'b0;
+                weight_n <= 2'b01;
+                w4_bram_en <= 1'b0;
+                w4_we <= 1'b0;
+                w1_bram_en <= 1'b1;
+                w1_we <= 1'b1;
+              end
+            end
+          end
+
+          if (w4_addr[9:0] >= 10'd1023 || (!feat_size[10] && S_AXIS_TLAST)) begin
+            weight_cnt <= 8'b0;
+            w_receive_done <= 1'b1;
+            w1_bram_en <= 1'b0;
+            w1_we <= 1'b0;
+            w2_bram_en <= 1'b0;
+            w2_we <= 1'b0;
+            w3_bram_en <= 1'b0;
+            w3_we <= 1'b0;
+            w4_bram_en <= 1'b0;
+            w4_we <= 1'b0;
+            s_axis_tready <= 1'b0;
+            state <= STATE_READ_BIAS;
+          end
         end
         STATE_READ_BIAS: begin
-          
+          state <= STATE_PSUM;
         end
         STATE_COMPUTE: begin
           if (cnt_4[2]) state <= STATE_PSUM;
@@ -623,7 +732,10 @@ module fc_module
   always @(posedge clk) begin
     if (!rstn) begin
       f_addr <= 10'b0;
-      w_addr <= 10'b0;
+      w1_addr <= 10'b0;
+      w2_addr <= 10'b0;
+      w3_addr <= 10'b0;
+      w4_addr <= 10'b0;
       first1 <= 1'b0;
       p1_b <= 8'h00;
       p2_b <= 8'h00;
@@ -637,7 +749,7 @@ module fc_module
           
         end
         STATE_RECEIVE_FEATURE: begin
-                    
+          
         end
         STATE_RECEIVE_BIAS: begin
           
@@ -653,7 +765,10 @@ module fc_module
           if (cnt_4[2]) begin //4개 연산할 때마다  
             cnt_4 <= 3'b000;
             f_addr <= next_faddr;
-            w_addr <= next_waddr;
+            w1_addr <= next_waddr;
+            w2_addr <= next_waddr;
+            w3_addr <= next_waddr;
+            w4_addr <= next_waddr;
             pre_weight2 <= weight2;
             pre_weight3 <= weight3;
             pre_weight4 <= weight4;
