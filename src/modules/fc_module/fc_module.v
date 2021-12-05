@@ -383,7 +383,8 @@ module fc_module
     input wire [2:0] command,
     input wire [20:0] size,
     // output wire [31:0] FEAT_SIZE, BIAS_SIZE, WEIGHT_SIZE,
-    output wire FC_DONE
+
+    output wire F_writedone, B_writedone, W_writedone, FC_DONE
   ); 
 
   localparam STATE_IDLE = 4'd0,
@@ -436,6 +437,10 @@ module fc_module
   reg [31:0] weight1, weight2, weight3, weight4, pre_weight2, pre_weight3, pre_weight4, feat;
   reg [7:0] p1_a, p1_b, p2_b, p3_b, p4_b;
   reg f_receive_done, b_receive_done, w_receive_done;
+
+  assign F_writedone = f_receive_done;
+  assign B_writedone = b_receive_done;
+  assign W_writedone = w_receive_done;
 
   sram_32x1024 weight1_sram_32x1024(
   .addra(w1_addr[9:0]),
@@ -606,7 +611,7 @@ module fc_module
           if (S_AXIS_TLAST) begin
             s_axis_tready <= 1'b0;
             state <= STATE_IDLE;
-            f_receive_done <= 1'b1;
+            b_receive_done <= 1'b1;
             f_bram_en <= 1'b0;
             f_we <= 1'b0;
           end
