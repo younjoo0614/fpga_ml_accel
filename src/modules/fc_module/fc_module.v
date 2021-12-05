@@ -98,21 +98,17 @@ CLG4 clg4(.C_in(C_in), .p(p), .g(g), .C_out(c));
 
 endmodule
 
-module multiplier (
-                    A,    // Signed 8 bit
-                    B,    // Signed 8 bit
-                    first,
-                    clk,
-                    en,
-                    result, of);
+module pe (                    
+  input [7:0]      A,
+  input [7:0]      B,
+  input             en,
+  input            first,
+  input              clk,
+  output wire [7:0] out_a, out_b,
+  output reg  [15:0] result,
+  output wire of
+  );  
   
-  input [7:0]      A;
-  input [7:0]      B;
-  input             en;
-  input            first;
-  input              clk;
-  output reg  [15:0] result;
-  output wire of;
   // Internal Wires 
   wire   [7:0]   A_mag;         
   wire   [7:0]   B_mag;
@@ -131,6 +127,7 @@ module multiplier (
   // Internal Registers
   reg    [15:0]  sum;
   reg    [7:0]   A_reg;
+  reg    [7:0]   out_a_reg, out_b_reg;
   reg            f1_reg, f2_reg, f3_reg, f4_reg, f5_reg, f6_reg, f7_reg, f8_reg;
   reg    [7:0]   p1_reg, p2_reg, p3_reg, p4_reg, p5_reg, p6_reg, p7_reg, p8_reg;
   reg    [5:0]   lsb_sum21_reg, lsb_sum22_reg, lsb_sum23_reg, lsb_sum24_reg;
@@ -147,7 +144,8 @@ module multiplier (
   reg    [15:0]  sum_unsigned_reg;
   reg            sign_s1, sign_s2, sign_s3, sign_s4, sign_s5, sign_s6, sign_s7; // sign bit
           
-    
+  assign out_a = out_a_reg;
+  assign out_b = out_b_reg;
   // Stage 1: Partial Products
   // Take the Magnitude of Signed Numbers.  
     assign A_mag = A[7] ? ~A[7:0] + 1 : A[7:0];               
@@ -181,6 +179,8 @@ module multiplier (
       p8_reg <= p8;
       sign_s1 <= sign; 
       f1_reg <= first;
+      out_a_reg <= A;
+      out_b_reg <= B;
     end                               
   end
   
@@ -417,21 +417,51 @@ module fc_module
   // TODO : Write your code here
   ////////////////////////////////////////////////////////////////////////////
   reg[10:0] w_addr, f_addr;
-  reg bram_en, w_we, f_we;
+  reg bram_en, w1_we, w2_we, w3_we, w4_we, f_we;
   wire [31:0] w_dout, f_dout;
   reg [31:0] din;
   reg [31:0] tdata;
   wire [7:0] a12, a23, a34;
   reg [1:0] delay;
-  reg f_bram_en, w_bram_en;
+  reg f_bram_en, w1_bram_en, w2_bram_en, w3_bram_en, w4_bram_en;
+  reg first1, first2, first3, first4;
+  reg pe_1_en, pe_2_en, pe_3_en, pe_4_en;
+  reg [31:0] weight1, weight2, weight3, weight4, feat;
 
-  sram_32x1024 weight_sram_32x1024(
+  sram_32x1024 weight1_sram_32x1024(
   .addra(w_addr[9:0]),
   .clka(clk),
   .dina(din),
   .douta(w_dout),
-  .ena(w_bram_en),
-  .wea(w_we)
+  .ena(w1_bram_en),
+  .wea(w1_we)
+  );
+
+  sram_32x1024 weight2_sram_32x1024(
+  .addra(w_addr[9:0]),
+  .clka(clk),
+  .dina(din),
+  .douta(w_dout),
+  .ena(w2_bram_en),
+  .wea(w2_we)
+  );
+
+  sram_32x1024 weight3_sram_32x1024(
+  .addra(w_addr[9:0]),
+  .clka(clk),
+  .dina(din),
+  .douta(w_dout),
+  .ena(w3_bram_en),
+  .wea(w3_we)
+  );
+
+  sram_32x1024 weight4_sram_32x1024(
+  .addra(w_addr[9:0]),
+  .clka(clk),
+  .dina(din),
+  .douta(w_dout),
+  .ena(w4_bram_en),
+  .wea(w4_we)
   );
 
   sram_32x1024 feat_sram_32x1024(
@@ -445,42 +475,50 @@ module fc_module
 
   pe pe1 (
     .clk(clk),
-    .rstn(rstn),
-    .in_a(f_dout),
-    .in_b(w_dout[31:24]),
-    .out_a(a12),
+    .en(pe_1_en),
+    .A(f_dout),
+    .B(w_dout[31:24]),
+    .out_A(a12),
     .out_b(),
-    .out_c(tdata[31:24])
+    .result(tdata[31:24]),
+    .first(first1),
+    .of()
   );
 
   pe pe2 (
     .clk(clk),
-    .rstn(rstn),
-    .in_a(a12),
-    .in_b(w_dout[23:16]),
+    .en(pe_2_en),
+    .A(a12),
+    .B(w_dout[23:16]),
     .out_a(a23),
     .out_b(),
-    .out_c(tdata[23:16])
+    .result(tdata[23:16]),
+    .first(first2),
+    .of()
   );
 
   pe pe3 (
     .clk(clk),
-    .rstn(rstn),
-    .in_a(a23),
-    .in_b(w_dout[15:8]),
+    .en(pe_3_en),
+    .A(a23),
+    .B(w_dout[15:8]),
     .out_a(a34),
     .out_b(),
-    .out_c(tdata[15:8])
+    .result(tdata[15:8]),
+    .first(first3),
+    .of()
   );
 
   pe pe4 (
     .clk(clk),
-    .rstn(rstn),
-    .in_a(a34),
-    .in_b(w_dout[15:8]),
+    .en(pe_4_en),
+    .A(a34),
+    .B(w_dout[15:8]),
     .out_a(),
     .out_b(),
-    .out_c(tdata[7:0])
+    .result(tdata[7:0]),
+    .first(first4),
+    .of()
   );
 
   reg [31:0] feat_size, bias_size, weight_size;
@@ -528,18 +566,7 @@ module fc_module
           end
         end
         STATE_RECEIVE_BIAS: begin
-          w_we <= 1'b1;
-          if (w_we) begin
-            if (size[19]) begin
-              
-            end
-            else if (size[15]) begin
-              
-            end
-            else begin
-              
-            end
-          end
+          
         end
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
           
@@ -562,12 +589,33 @@ module fc_module
       endcase
     end
   end
+
+  reg [15:0] next_faddr, next_waddr;
+  CLA_16Bit faddr_adder (
+    .A({6'h00,f_addr}),
+    .B(16'h0001),
+    .C_in(1'b1),
+    .S(next_faddr),
+    .C_out(),
+    .OF()
+  );
+
+  CLA_16Bit waddr_adder (
+    .A({6'h00,w_addr}),
+    .B(16'h0001),
+    .C_in(1'b1),
+    .S(next_waddr),
+    .C_out(),
+    .OF()
+  );
+ 
   
   // data path
   always @(posedge clk) begin
     if (!rstn) begin
       f_addr <= 10'b0;
       w_addr <= 10'b0;
+      first1 <= 1'b0;
     end
     else begin
       case (state)
@@ -587,18 +635,26 @@ module fc_module
           
         end
         STATE_COMPUTE: begin
-          f_bram_en <= 1'b1;
-          w_bram_en <= 1'b1;
-          f_addr <= f_addr + 1;
-          if (f_addr[10]) begin
-            f_bram_en <= 1'b0;
+          first2 <= first1;
+          first3 <= first2;
+          first4 <= first3;
+          if (first1) begin
+            first1 <= 1'b0;
+            f_addr <= next_faddr;
+            w_addr <= next_waddr;
           end
           else begin
-            
-          end
+            first1 <= 1'b1;
+          end          
         end
         STATE_PSUM: begin
-          
+          if (!delay[0]) begin
+            delay <= delay +1;
+          end
+          else begin
+            delay <= 2'b00;
+            
+          end
         end
         STATE_WRITE_RESULT: begin
           

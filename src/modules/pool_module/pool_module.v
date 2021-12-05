@@ -201,7 +201,7 @@ module pool_module
 
         STATE_RECEIVE_DATA: begin     
           m_axis_tvalid <= 1'b0;     
-          s_axis_tready <= 1'b1;
+          
           if (addr[6] && flen_reg [5]) begin
             state <= STATE_POOL;
             addr <= 7'h00;
@@ -231,8 +231,11 @@ module pool_module
               feat[addr] <= S_AXIS_TDATA[7:0];
               if (S_AXIS_TLAST) receive_done <= 1'b1;    
               s_axis_tready <= 1'b0;   
-            end           
-          end
+            end 
+            else begin
+              s_axis_tready <= 1'b1;
+            end          
+          end          
         end
 
         STATE_POOL: begin  
@@ -264,12 +267,12 @@ module pool_module
           end
         end
 
-        STATE_ACCUM: begin
-          idx_16 <= idx_16 + 2;
+        STATE_ACCUM: begin          
           cnt_4 <= cnt_4 +1;
           if (cnt_4 == 3'b000) begin
             tdata[7:0] <= max;            
             state <= STATE_POOL;
+            idx_16 <= idx_16 + 2;
           end
           else if (cnt_4 == 3'b001) begin
             tdata[15:8] <= max;
@@ -277,16 +280,21 @@ module pool_module
               state <= STATE_RECEIVE_DATA;              
               idx_16 <= 6'b000000;
             end
-            else state <= STATE_POOL;
+            else begin
+              state <= STATE_POOL;
+              idx_16 <= idx_16 + 2;
+            end 
           end
           else if (cnt_4 == 3'b010) begin
             tdata[23:16] <= max;          
             state <= STATE_POOL;
+            idx_16 <= idx_16 + 2;
           end
           else begin
             state <= STATE_DATA_SEND;
             tdata[31:24] <= max;
             cnt_4 <= 3'b000;
+            idx_16 <= idx_16 + 2;
           end          
         end
 
@@ -301,8 +309,7 @@ module pool_module
               state <= STATE_IDLE;
             end
             else begin
-              state <= STATE_RECEIVE_DATA;
-              
+              state <= STATE_RECEIVE_DATA;              
               idx_16 <= 6'b000000;
             end            
           end
@@ -337,8 +344,7 @@ module pool_module
               state <= STATE_IDLE;
             end
             else begin
-              state <= STATE_RECEIVE_DATA;
-              
+              state <= STATE_RECEIVE_DATA;              
               idx_16 <= 6'b000000;
             end
           end   
