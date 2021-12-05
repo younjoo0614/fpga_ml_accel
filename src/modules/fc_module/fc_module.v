@@ -443,48 +443,48 @@ module fc_module
   assign W_writedone = w_receive_done;
 
   sram_32x1024 weight1_sram_32x1024(
-  .addra(w1_addr[9:0]),
-  .clka(clk),
-  .dina(din),
-  .douta(w1_dout),
-  .ena(w1_bram_en),
-  .wea(w1_we)
+  .addr(w1_addr[9:0]),
+  .clk(clk),
+  .din(din),
+  .dout(w1_dout),
+  .bram_en(w1_bram_en),
+  .we(w1_we)
   );
 
   sram_32x1024 weight2_sram_32x1024(
-  .addra(w2_addr[9:0]),
-  .clka(clk),
-  .dina(din),
-  .douta(w2_dout),
-  .ena(w2_bram_en),
-  .wea(w2_we)
+  .addr(w2_addr[9:0]),
+  .clk(clk),
+  .din(din),
+  .dout(w2_dout),
+  .bram_en(w2_bram_en),
+  .we(w2_we)
   );
 
   sram_32x1024 weight3_sram_32x1024(
-  .addra(w3_addr[9:0]),
-  .clka(clk),
-  .dina(din),
-  .douta(w3_dout),
-  .ena(w3_bram_en),
-  .wea(w3_we)
+  .addr(w3_addr[9:0]),
+  .clk(clk),
+  .din(din),
+  .dout(w3_dout),
+  .bram_en(w3_bram_en),
+  .we(w3_we)
   );
 
   sram_32x1024 weight4_sram_32x1024(
-  .addra(w4_addr[9:0]),
-  .clka(clk),
-  .dina(din),
-  .douta(w4_dout),
-  .ena(w4_bram_en),
-  .wea(w4_we)
+  .addr(w4_addr[9:0]),
+  .clk(clk),
+  .din(din),
+  .dout(w4_dout),
+  .bram_en(w4_bram_en),
+  .we(w4_we)
   );
 
   sram_32x1024 feat_sram_32x1024(
-  .addra(f_addr[9:0]),
-  .clka(clk),
-  .dina(din),
-  .douta(f_dout),
-  .ena(f_bram_en),
-  .wea(f_we)
+  .addr(f_addr[9:0]),
+  .clk(clk),
+  .din(din),
+  .dout(f_dout),
+  .bram_en(f_bram_en),
+  .we(f_we)
   );
 
   pe pe1 (
