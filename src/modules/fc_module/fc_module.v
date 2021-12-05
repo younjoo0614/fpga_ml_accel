@@ -413,7 +413,8 @@ module fc_module
   ////////////////////////////////////////////////////////////////////////////
   // TODO : Write your code here
   ////////////////////////////////////////////////////////////////////////////
-  reg [10:0] f_addr, w1_addr, w2_addr, w3_addr, w4_addr;
+  reg [10:0] f_addr, w1_addr, w2_addr, w3_addr, w4_addr, b_addr;
+  reg [9:0] fb_addr;
   reg w1_we, w2_we, w3_we, w4_we, f_we;
   reg [1:0] weight_n;
   reg [7:0] weight_cnt;
@@ -476,7 +477,7 @@ module fc_module
   );
 
   sram_32x1024 feat_sram_32x1024(
-  .addr(f_addr[9:0]),
+  .addr(fb_addr),
   .clk(clk),
   .din(din),
   .dout(f_dout),
@@ -712,8 +713,11 @@ module fc_module
         STATE_WRITE_RESULT: begin
           
         end
-        STATE_SEND_RESULT: begin
+        STATE_ADD_BIAS: begin
           
+        end
+        STATE_SEND_RESULT: begin
+          state <= STATE_COMPUTE;
         end
       endcase
     end
@@ -742,11 +746,13 @@ module fc_module
   // data path
   always @(posedge clk) begin
     if (!rstn) begin
-      f_addr <= 10'b0;
-      w1_addr <= 10'b0;
-      w2_addr <= 10'b0;
-      w3_addr <= 10'b0;
-      w4_addr <= 10'b0;
+      fb_addr <= 9'h000;
+      f_addr <=  10'h000;
+      b_addr <= 10'h000;
+      w1_addr <= 10'h000;
+      w2_addr <= 10'h000;
+      w3_addr <= 10'h000;
+      w4_addr <= 10'h000;
       first1 <= 1'b0;
       p1_b <= 8'h00;
       p2_b <= 8'h00;
@@ -772,6 +778,7 @@ module fc_module
           
         end
         STATE_COMPUTE: begin
+          m_axis_tvalid <= 1'b0;
           cnt_4 = cnt_4 +1;
           if (cnt_4[2]) begin //4개 연산할 때마다  
             cnt_4 <= 3'b000;
