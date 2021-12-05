@@ -610,7 +610,6 @@ module fc_module
 
             f_addr <= 11'b0;
             b_addr <= 11'h200;
-
           end
           else s_axis_tready <= 1'b0;
         end
