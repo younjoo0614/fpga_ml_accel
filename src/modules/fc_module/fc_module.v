@@ -380,7 +380,8 @@ module fc_module
     input wire [2:0] command,
     input wire [20:0] size,
     // output wire [31:0] FEAT_SIZE, BIAS_SIZE, WEIGHT_SIZE,
-    output wire FC_DONE
+
+    output wire F_writedone, B_writedone, W_writedone, FC_DONE
   ); 
 
   localparam STATE_IDLE = 4'd0,
@@ -391,8 +392,8 @@ module fc_module
   STATE_COMPUTE = 4'd5,
   STATE_PSUM = 4'd6,
   STATE_ADD_BIAS = 4'd7,
-  STATE_WRITE_RESULT = 4'd7,
-  STATE_SEND_RESULT = 4'd8;
+  STATE_WRITE_RESULT = 4'd8,
+  STATE_SEND_RESULT = 4'd9;
   
   reg [3:0] state;
   
@@ -424,7 +425,8 @@ module fc_module
   assign din = S_AXIS_TDATA;
 
   reg [31:0] tdata;
-  wire [31:0] tdata_temp;
+  reg [27:0] pe_result1, pe_result2, pe_result3, pe_result4;
+  wire [27:0] pe_result1_temp, pe_result2_temp, pe_result3_temp, pe_result4_temp;
   wire [7:0] a12, a23, a34;
   reg [1:0] delay;
   reg f_bram_en, w1_bram_en, w2_bram_en, w3_bram_en, w4_bram_en;
@@ -434,49 +436,53 @@ module fc_module
   reg [7:0] p1_a, p1_b, p2_b, p3_b, p4_b;
   reg f_receive_done, b_receive_done, w_receive_done;
 
+  assign F_writedone = f_receive_done;
+  assign B_writedone = b_receive_done;
+  assign W_writedone = w_receive_done;
+
   sram_32x1024 weight1_sram_32x1024(
-  .addra(w1_addr[9:0]),
-  .clka(clk),
-  .dina(din),
-  .douta(w1_dout),
-  .ena(w1_bram_en),
-  .wea(w1_we)
+  .addr(w1_addr[9:0]),
+  .clk(clk),
+  .din(din),
+  .dout(w1_dout),
+  .bram_en(w1_bram_en),
+  .we(w1_we)
   );
 
   sram_32x1024 weight2_sram_32x1024(
-  .addra(w2_addr[9:0]),
-  .clka(clk),
-  .dina(din),
-  .douta(w2_dout),
-  .ena(w2_bram_en),
-  .wea(w2_we)
+  .addr(w2_addr[9:0]),
+  .clk(clk),
+  .din(din),
+  .dout(w2_dout),
+  .bram_en(w2_bram_en),
+  .we(w2_we)
   );
 
   sram_32x1024 weight3_sram_32x1024(
-  .addra(w3_addr[9:0]),
-  .clka(clk),
-  .dina(din),
-  .douta(w3_dout),
-  .ena(w3_bram_en),
-  .wea(w3_we)
+  .addr(w3_addr[9:0]),
+  .clk(clk),
+  .din(din),
+  .dout(w3_dout),
+  .bram_en(w3_bram_en),
+  .we(w3_we)
   );
 
   sram_32x1024 weight4_sram_32x1024(
-  .addra(w4_addr[9:0]),
-  .clka(clk),
-  .dina(din),
-  .douta(w4_dout),
-  .ena(w4_bram_en),
-  .wea(w4_we)
+  .addr(w4_addr[9:0]),
+  .clk(clk),
+  .din(din),
+  .dout(w4_dout),
+  .bram_en(w4_bram_en),
+  .we(w4_we)
   );
 
   sram_32x1024 feat_sram_32x1024(
-  .addra(f_addr[9:0]),
-  .clka(clk),
-  .dina(din),
-  .douta(f_dout),
-  .ena(f_bram_en),
-  .wea(f_we)
+  .addr(f_addr[9:0]),
+  .clk(clk),
+  .din(din),
+  .dout(f_dout),
+  .bram_en(f_bram_en),
+  .we(f_we)
   );
 
   pe pe1 (
@@ -486,7 +492,7 @@ module fc_module
     .B(p1_b),
     .out_a(a12),
     .out_b(),
-    .result(tdata_temp[7:0]),
+    .result(pe_result1_temp),
     .first(first1),
     .of()
   );
@@ -498,7 +504,7 @@ module fc_module
     .B(p2_b),
     .out_a(a23),
     .out_b(),
-    .result(tdata_temp[15:8]),
+    .result(pe_result2_temp),
     .first(first2),
     .of()
   );
@@ -510,7 +516,7 @@ module fc_module
     .B(p3_b),
     .out_a(a34),
     .out_b(),
-    .result(tdata_temp[23:16]),
+    .result(pe_result3_temp),
     .first(first3),
     .of()
   );
@@ -522,7 +528,7 @@ module fc_module
     .B(p4_b),
     .out_a(),
     .out_b(),
-    .result(tdata_temp[31:24]),
+    .result(pe_result4_temp),
     .first(first4),
     .of()
   );
@@ -603,7 +609,7 @@ module fc_module
           if (S_AXIS_TLAST) begin
             s_axis_tready <= 1'b0;
             state <= STATE_IDLE;
-            f_receive_done <= 1'b1;
+            b_receive_done <= 1'b1;
             f_bram_en <= 1'b0;
             f_we <= 1'b0;
           end
@@ -874,17 +880,20 @@ module fc_module
             feat <= f_dout;
           end
         end
-        STATE_WRITE_RESULT: begin
+        STATE_ADD_BIAS: begin
           pe_delay <= pe_delay + 1;
           if (pe_delay[2]) begin
-            if (!pe_delay[0] &&!pe_delay[1] )tdata[7:0] <= tdata_temp[7:0];
-            else if (pe_delay[0] && !pe_delay[1]) tdata[15:8] <= tdata_temp[15:8];
-            else if (!pe_delay[0] && pe_delay[1]) tdata[23:16] <= tdata_temp[23:16];
+            if (!pe_delay[0] &&!pe_delay[1]) pe_result1 <= pe_result1_temp;
+            else if (pe_delay[0] && !pe_delay[1]) pe_result2 <= pe_result2_temp;
+            else if (!pe_delay[0] && pe_delay[1]) pe_result3 <= pe_result3_temp;
             else if (pe_delay[0] &&!pe_delay[1]) begin
-              tdata[31:24] <= tdata_temp[31:24];
+              pe_result4 <= pe_result4_temp[31:24];
               state <= STATE_SEND_RESULT;
             end
           end
+        end
+        STATE_WRITE_RESULT: begin
+          
         end
         STATE_SEND_RESULT: begin
           m_axis_tvalid <= 1'b1;
