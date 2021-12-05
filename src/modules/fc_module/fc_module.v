@@ -418,15 +418,16 @@ module fc_module
   ////////////////////////////////////////////////////////////////////////////
   reg[10:0] w_addr, f_addr;
   reg bram_en, w1_we, w2_we, w3_we, w4_we, f_we;
-  wire [31:0] w_dout, f_dout;
+  wire [31:0] w1_dout, w2_dout, w3_dout, w4_dout, f_dout;
   reg [31:0] din;
-  reg [31:0] tdata;
+  reg [31:0] tdata, tdata_temp;
   wire [7:0] a12, a23, a34;
   reg [1:0] delay;
   reg f_bram_en, w1_bram_en, w2_bram_en, w3_bram_en, w4_bram_en;
   reg first1, first2, first3, first4;
   reg pe_1_en, pe_2_en, pe_3_en, pe_4_en;
-  reg [31:0] weight1, weight2, weight3, weight4, feat;
+  reg [31:0] weight1, weight2, weight3, weight4, pre_weight2, pre_weight3, pre_weight4, feat;
+  reg [7:0] p1_a, p1_b, p2_b, p3_b, p4_b;
 
   sram_32x1024 weight1_sram_32x1024(
   .addra(w_addr[9:0]),
@@ -476,11 +477,11 @@ module fc_module
   pe pe1 (
     .clk(clk),
     .en(pe_1_en),
-    .A(f_dout),
-    .B(w_dout[31:24]),
+    .A(p1_a),
+    .B(p1_b),
     .out_A(a12),
     .out_b(),
-    .result(tdata[31:24]),
+    .result(tdata_temp[7:0]),
     .first(first1),
     .of()
   );
@@ -489,10 +490,10 @@ module fc_module
     .clk(clk),
     .en(pe_2_en),
     .A(a12),
-    .B(w_dout[23:16]),
+    .B(p2_b),
     .out_a(a23),
     .out_b(),
-    .result(tdata[23:16]),
+    .result(tdata_temp[15:8]),
     .first(first2),
     .of()
   );
@@ -501,10 +502,10 @@ module fc_module
     .clk(clk),
     .en(pe_3_en),
     .A(a23),
-    .B(w_dout[15:8]),
+    .B(p3_b),
     .out_a(a34),
     .out_b(),
-    .result(tdata[15:8]),
+    .result(tdata_temp[23:16]),
     .first(first3),
     .of()
   );
@@ -513,10 +514,10 @@ module fc_module
     .clk(clk),
     .en(pe_4_en),
     .A(a34),
-    .B(w_dout[15:8]),
+    .B(p4_b),
     .out_a(),
     .out_b(),
-    .result(tdata[7:0]),
+    .result(tdata_temp[31:24]),
     .first(first4),
     .of()
   );
@@ -528,6 +529,8 @@ module fc_module
   assign BIAS_SIZE = bias_size;
   assign WEIGHT_SIZE = weight_size;
   assign FC_DONE = fc_done;
+
+  reg [5:0] cnt_4;
 
   // control path
   always @(posedge clk) begin
@@ -575,10 +578,16 @@ module fc_module
           
         end
         STATE_COMPUTE: begin
+          if (cnt_4[2]) state <= STATE_PSUM;
           
         end
         STATE_PSUM: begin
-          
+          if (delay[1]) begin            
+            if (feat_size[10] && f_addr[10]) state <= STATE_WRITE_RESULT;
+            else if (feat_size[8] && f_addr[8]) state <= STATE_WRITE_RESULT;
+            else if (feat_size[6] && f_addr[6]) state <= STATE_WRITE_RESULT;
+            else state <= STATE_COMPUTE;
+          end
         end
         STATE_WRITE_RESULT: begin
           
@@ -609,13 +618,18 @@ module fc_module
     .OF()
   );
  
-  
+  reg [3:0] pe_delay;
   // data path
   always @(posedge clk) begin
     if (!rstn) begin
       f_addr <= 10'b0;
       w_addr <= 10'b0;
       first1 <= 1'b0;
+      p1_b <= 8'h00;
+      p2_b <= 8'h00;
+      p3_b <= 8'h00;
+      p4_b <= 8'h00;
+      cnt_4 <= 3'b000;
     end
     else begin
       case (state)
@@ -635,32 +649,133 @@ module fc_module
           
         end
         STATE_COMPUTE: begin
-          first2 <= first1;
-          first3 <= first2;
-          first4 <= first3;
-          if (first1) begin
-            first1 <= 1'b0;
+          cnt_4 = cnt_4 +1;
+          if (cnt_4[2]) begin //4개 연산할 때마다  
+            cnt_4 <= 3'b000;
             f_addr <= next_faddr;
             w_addr <= next_waddr;
+            pre_weight2 <= weight2;
+            pre_weight3 <= weight3;
+            pre_weight4 <= weight4;
+            weight1 <= 32'h00000000;
+            weight2 <= 32'h00000000;
+            weight3 <= 32'h00000000;
+            weight4 <= 32'h00000000;
+            if (feat_size[10] && f_addr[10]) begin //column 계산 끝났을 때
+              f_addr <= 10'h000;
+              pre_weight2 <= 32'h00000000;
+            end
+            else if (feat_size[8] && f_addr[8]) begin
+              f_addr <= 10'h000;
+              pre_weight3 <= 32'h00000000;
+            end
+            else if (feat_size[6] && f_addr[6])begin
+              f_addr <= 10'h000;
+              pre_weight4 <= 32'h00000000;
+            end
           end
-          else begin
-            first1 <= 1'b1;
-          end          
+          else if (f_addr[9:0] == 10'h000)begin //첫 4개 할 때
+            p1_a <= feat[cnt_4<<3-:8];
+            first2 <= first1;
+            first3 <= first2;
+            first4 <= first3;
+            
+            if (first1) begin //cnt_4 1일 때
+              first1 <= 1'b0;  
+              p1_b <= weight1[15:8]; //index 주의
+              p2_b <= weight2[7:0];
+              p3_b <= pre_weight3[31:24];
+              p4_b <= pre_weight4[23:16];                
+            end
+            else if (cnt_4 == 3'b010) begin
+              p1_b <= weight1[23:16]; //index 주의
+              p2_b <= weight2[15:8];
+              p3_b <= weight3[7:0];
+              p4_b <= pre_weight4[31:24];
+            end
+            else if (cnt_4 == 3'b011) begin
+              p1_b <= weight1[31:24]; //index 주의
+              p2_b <= weight2[23:16];
+              p3_b <= weight3[15:8];
+              p4_b <= weight4[7:0];
+            end
+            else if (cnt_4 == 3'b000)begin
+              first1 <= 1'b1;
+              pe_1_en <= 1'b1;
+              pe_2_en <= 1'b1;
+              pe_3_en <= 1'b1;
+              pe_4_en <= 1'b1;
+              p1_b <= weight1[7:0]; //index 주의
+              p2_b <= pre_weight2[31:24];
+              p3_b <= pre_weight3[23:16];
+              p4_b <= pre_weight4[15:8];
+            end          
+          end  
+          else begin // 첫 4개도 아니고 cnt_4도 4가 아닐 때 
+            pe_1_en <= 1'b1;
+            pe_2_en <= 1'b1;
+            pe_3_en <= 1'b1;
+            pe_4_en <= 1'b1;
+            if (cnt_4 == 3'b001) begin //cnt_4 1일 때
+              first1 <= 1'b0;  
+              p1_b <= weight1[15:8]; //index 주의
+              p2_b <= weight2[7:0];
+              p3_b <= pre_weight3[31:24];
+              p4_b <= pre_weight4[23:16];                
+            end
+            else if (cnt_4 == 3'b010) begin
+              p1_b <= weight1[23:16]; //index 주의
+              p2_b <= weight2[15:8];
+              p3_b <= weight3[7:0];
+              p4_b <= pre_weight4[31:24];
+            end
+            else if (cnt_4 == 3'b011) begin
+              p1_b <= weight1[31:24]; //index 주의
+              p2_b <= weight2[23:16];
+              p3_b <= weight3[15:8];
+              p4_b <= weight4[7:0];
+            end
+            else if (cnt_4 == 3'b000)begin
+              p1_b <= weight1[7:0]; //index 주의
+              p2_b <= pre_weight2[31:24];
+              p3_b <= pre_weight3[23:16];
+              p4_b <= pre_weight4[15:8];
+            end          
+          end        
         end
         STATE_PSUM: begin
+          f_bram_en <= 1'b1;
+          w1_bram_en <= 1'b1;
+          w2_bram_en <= 1'b1;
+          w3_bram_en <= 1'b1;
+          w4_bram_en <= 1'b1;
           if (!delay[0]) begin
             delay <= delay +1;
           end
           else begin
             delay <= 2'b00;
-            
+            weight1 <= w1_dout;
+            weight2 <= w2_dout;
+            weight3 <= w3_dout;
+            weight4 <= w4_dout;
+            feat <= f_dout;
           end
         end
         STATE_WRITE_RESULT: begin
-          
+          pe_delay <= pe_delay + 1;
+          if (pe_delay[2]) begin
+            if (!pe_delay[0] &&!pe_delay[1] )tdata[7:0] <= tdata_temp[7:0];
+            else if (pe_delay[0] && !pe_delay[1]) tdata[15:8] <= tdata_temp[15:8];
+            else if (!pe_delay[0] && pe_delay[1]) tdata[23:16] <= tdata_temp[23:16];
+            else if (pe_delay[0] &&!pe_delay[1]) begin
+              tdata[31:24] <= tdata_temp[31:24];
+              state <= STATE_SEND_RESULT;
+            end
+          end
         end
         STATE_SEND_RESULT: begin
-          
+          m_axis_tvalid <= 1'b1;
+          m_axis_tdata <= tdata;
         end
       endcase
     end
