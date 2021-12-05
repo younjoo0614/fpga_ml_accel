@@ -98,17 +98,21 @@ CLG4 clg4(.C_in(C_in), .p(p), .g(g), .C_out(c));
 
 endmodule
 
-module pe (
+module multiplier (
                     A,    // Signed 8 bit
                     B,    // Signed 8 bit
+                    first,
                     clk,
-                    en, result, done, of);
+                    en,
+                    result, of);
   
   input [7:0]      A;
   input [7:0]      B;
-  input              clk,en;
+  input             en;
+  input            first;
+  input              clk;
   output reg  [15:0] result;
-  output reg done, of;
+  output wire of;
   // Internal Wires 
   wire   [7:0]   A_mag;         
   wire   [7:0]   B_mag;
@@ -127,7 +131,7 @@ module pe (
   // Internal Registers
   reg    [15:0]  sum;
   reg    [7:0]   A_reg;
-  reg    [7:0]   B1_reg, B2_reg, B3_reg, B4_reg, B5_reg, B6_reg, B7_reg, B8_reg, B9_reg;
+  reg            f1_reg, f2_reg, f3_reg, f4_reg, f5_reg, f6_reg, f7_reg, f8_reg;
   reg    [7:0]   p1_reg, p2_reg, p3_reg, p4_reg, p5_reg, p6_reg, p7_reg, p8_reg;
   reg    [5:0]   lsb_sum21_reg, lsb_sum22_reg, lsb_sum23_reg, lsb_sum24_reg;
   reg    [7:4]   p2_msb, p4_msb, p6_msb, p8_msb;
@@ -176,7 +180,7 @@ module pe (
       p6_reg <= p6;
       p8_reg <= p8;
       sign_s1 <= sign; 
-      B1_reg <= B;  
+      f1_reg <= first;
     end                               
   end
   
@@ -206,8 +210,8 @@ module pe (
       p7_msb <= p7_reg[7:5];
       p8_msb <= p8_reg[7:4];
       
-      sign_s2 <= sign_s1;         
-      B2_reg <= B1_reg;  
+      sign_s2 <= sign_s1;      
+      f2_reg <= f1_reg;
     end
             
   end
@@ -234,8 +238,8 @@ module pe (
       sum33_reg <= sum33;
       sum34_reg <= sum34;
     
-      sign_s3 <= sign_s2;    
-      B3_reg <= B2_reg;    
+      sign_s3 <= sign_s2;   
+      f3_reg <= f2_reg;
     end                        
   end
   
@@ -257,8 +261,8 @@ module pe (
       msb_43 <= sum33_reg[9:7];
       msb_44 <= sum34_reg[9:5];
     
-      sign_s4 <= sign_s3;     
-      B4_reg <= B3_reg;                
+      sign_s4 <= sign_s3;  
+      f4_reg <= f3_reg;        
     end       
   end
   
@@ -279,7 +283,7 @@ module pe (
       sum52_reg <= sum52;
 
       sign_s5 <= sign_s4;  
-      B5_reg <= B4_reg; 
+      f5_reg <= f4_reg;
     end                  
   end
   
@@ -298,7 +302,7 @@ module pe (
       msb_62 <= sum52_reg[11:5];            
     
       sign_s6 <= sign_s5; 
-      B6_reg <= B5_reg;     
+      f6_reg <= f5_reg;
     end               
   end
   
@@ -315,7 +319,7 @@ module pe (
       sum_unsigned_reg <= sum_unsigned;                     
     
       sign_s7 <= sign_s6;   
-      B7_reg <= B6_reg;    
+      f7_reg <= f6_reg;
     end                   
   end
   
@@ -327,16 +331,18 @@ module pe (
       if(sign_s7==1'b0) sum <= sum_unsigned_reg;
 
       else sum <= ~sum_unsigned_reg[15:0] + 1;
-      B7_reg <= B6_reg;       
+      f8_reg <= f7_reg;
     end
      
   ///////////////////////////////////////////////////////
   end
   // Stage 9: Add inputa*inputb and outputc
-  reg [15:0] temp;
+  wire [15:0] temp;
+  wire [15:0] result_temp;
+  assign result_temp = (f8_reg) ? 16'h0000: result;
   CLA_16Bit u_cla_16bit (
     .A(sum),
-    .B(B7_reg),
+    .B(result_temp),
     .C_in(1'b0),
     .C_out(),
     .S(temp),
@@ -345,7 +351,6 @@ module pe (
   always @(posedge clk) begin
     if (en) begin
       result <= temp;
-      done <= 1'b1;
     end    
   end
 endmodule
