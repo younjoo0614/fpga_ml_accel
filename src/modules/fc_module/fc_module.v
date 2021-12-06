@@ -649,6 +649,7 @@ module fc_module
       w2_bram_en <= 1'b0;
       w3_bram_en <= 1'b0;
       w4_bram_en <= 1'b0;
+      s_axis_tready <= 1'b0;
     end
     else begin
       case (state)
@@ -658,6 +659,7 @@ module fc_module
             if (command[0]) begin
               state <= STATE_RECEIVE_FEATURE;
               s_axis_tready <= 1'b1;
+              f_addr <= 11'h000;
               f_bram_en <= 1'b1;
               f_we <= 1'b1;
               feat_size <= size[10:0];
@@ -669,11 +671,17 @@ module fc_module
               f_bram_en <= 1'b1;
               f_we <= 1'b1;
             end
-            else if ( command[2]) begin
+            else if (command[2]) begin
               state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
               s_axis_tready <= 1'b1;
               w1_bram_en <= 1'b1;
               w1_we <= 1'b1;
+              w2_bram_en <= 1'b1;
+              w2_we <= 1'b1;
+              w3_bram_en <= 1'b1;
+              w3_we <= 1'b1;
+              w4_bram_en <= 1'b1;
+              w4_we <= 1'b1;
               f_addr <= 11'b0;
               b_addr <= 11'h200;
             end
@@ -853,7 +861,7 @@ module fc_module
           else ;
         end
         STATE_RECEIVE_FEATURE: begin
-          f_addr <= f_addr + next_faddr;
+          f_addr <= next_faddr;
           fb_addr <= f_addr;
           if (S_AXIS_TLAST) begin            
             f_receive_done <= 1'b1;
@@ -861,6 +869,7 @@ module fc_module
         end
         STATE_RECEIVE_BIAS: begin
           b_addr <= next_baddr;
+          fb_addr <= b_addr;
           if (S_AXIS_TLAST) begin
             b_receive_done <= 1'b1;
           end
