@@ -658,24 +658,18 @@ module fc_module
           if (fc_start) begin
             if (command[0] && !f_receive_done) begin
               state <= STATE_RECEIVE_FEATURE;
-              f_addr <= 11'b0;
               f_bram_en <= 1'b1;
               f_we <= 1'b1;
-              feat_size <= size[10:0];
             end
             else if (command[1] && !b_receive_done) begin
               state <= STATE_RECEIVE_BIAS;
-              b_addr <= 11'h200;
               f_bram_en <= 1'b1;
               f_we <= 1'b1;
-              bias_size <= size[10:0];
             end
             else if (command[2] && !w_receive_done) begin
               state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
               w1_bram_en <= 1'b1;
               w1_we <= 1'b1;
-              f_addr <= 11'b0;
-              b_addr <= 11'h200;
             end
           end
         end
@@ -877,9 +871,10 @@ module fc_module
             f_addr <= 11'b0;
           end
           else if (command[1] && !b_receive_done) begin
-            f_addr <= 11'h200;
+            bias_size <= size[10:0];
+            b_addr <= 11'h200;
           end
-          else if (command[2] && !w_receive_done) begin            
+          else if (command[2] && !w_receive_done) begin
             w1_addr <= 11'b0;
             w2_addr <= 11'b0;
             w3_addr <= 11'b0;
@@ -895,6 +890,7 @@ module fc_module
             fb_addr <= f_addr;
           end
           if (receive_cnt == feat_size>>2) begin 
+            f_addr <= 10'h000;
             receive_cnt <= 10'h000;           
             f_receive_done <= 1'b1;
           end
@@ -906,6 +902,7 @@ module fc_module
             fb_addr <= b_addr;
           end          
           if (receive_cnt == bias_size>>2) begin
+            b_addr <= 10'h200;
             receive_cnt <= 10'h000; 
             b_receive_done <= 1'b1;
           end
@@ -921,6 +918,10 @@ module fc_module
                 if (column_cnt == bias_size - 1) begin
                   column_cnt <= 10'b0;
                   w_receive_done <= 1'b1;
+                  w1_addr <= 10'h000;
+                  w2_addr <= 10'h000;
+                  w3_addr <= 10'h000;
+                  w4_addr <= 10'h000;
                 end
                 else column_cnt <= column_cnt + 1;
               end
@@ -936,6 +937,10 @@ module fc_module
                 if (column_cnt == bias_size - 1) begin
                   column_cnt <= 10'b0;
                   w_receive_done <= 1'b1;
+                  w1_addr <= 10'h000;
+                  w2_addr <= 10'h000;
+                  w3_addr <= 10'h000;
+                  w4_addr <= 10'h000;
                 end
                 else column_cnt <= column_cnt + 1;
               end
@@ -951,6 +956,10 @@ module fc_module
                 if (column_cnt == bias_size - 1) begin
                   column_cnt <= 10'b0;
                   w_receive_done <= 1'b1;
+                  w1_addr <= 10'h000;
+                  w2_addr <= 10'h000;
+                  w3_addr <= 10'h000;
+                  w4_addr <= 10'h000;
                 end
                 else column_cnt <= column_cnt + 1;
               end
@@ -966,6 +975,10 @@ module fc_module
                 if (column_cnt == bias_size - 1) begin
                   column_cnt <= 10'b0;
                   w_receive_done <= 1'b1;
+                  w1_addr <= 10'h000;
+                  w2_addr <= 10'h000;
+                  w3_addr <= 10'h000;
+                  w4_addr <= 10'h000;
                 end
                 else column_cnt <= column_cnt + 1;
               end
@@ -973,6 +986,10 @@ module fc_module
           end
           if (w4_addr[10]) begin
             receive_cnt <= 10'b0;
+            w1_addr <= 10'h000;
+            w2_addr <= 10'h000;
+            w3_addr <= 10'h000;
+            w4_addr <= 10'h000;
           end
         end
         STATE_READ_BIAS: begin 
