@@ -694,6 +694,7 @@ module fc_module
             f_bram_en <= 1'b0;
             f_we <= 1'b0;
           end
+          else if (S_AXIS_TLAST) s_axis_tready <= 1'b0;
           else s_axis_tready <= 1'b1;
         end
         STATE_RECEIVE_BIAS: begin
@@ -861,7 +862,8 @@ module fc_module
       p2_b <= 8'h00;
       p3_b <= 8'h00;
       p4_b <= 8'h00;
-      cnt_4 <= 3'b000;      
+      cnt_4 <= 3'b000;   
+      receive_cnt <= 10'h000;   
     end
     else begin
       case (state)
