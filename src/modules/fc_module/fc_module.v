@@ -661,7 +661,6 @@ module fc_module
               f_bram_en <= 1'b1;
               f_we <= 1'b1;
               feat_size <= size[10:0];
-              s_axis_tready <= 1'b1;
             end
             else if (command[1] && !b_receive_done) begin
               state <= STATE_RECEIVE_BIAS;
@@ -669,23 +668,15 @@ module fc_module
               f_bram_en <= 1'b1;
               f_we <= 1'b1;
               bias_size <= size[10:0];
-              s_axis_tready <= 1'b1;
             end
             else if (command[2] && !w_receive_done) begin
               state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
               w1_bram_en <= 1'b1;
               w1_we <= 1'b1;
-              w2_bram_en <= 1'b1;
-              w2_we <= 1'b1;
-              w3_bram_en <= 1'b1;
-              w3_we <= 1'b1;
-              w4_bram_en <= 1'b1;
-              w4_we <= 1'b1;
               f_addr <= 11'b0;
               b_addr <= 11'h200;
             end
-          end          
-          else s_axis_tready <= 1'b0;
+          end
         end
         STATE_RECEIVE_FEATURE: begin
           if (receive_cnt == feat_size>>2) begin            
@@ -694,7 +685,6 @@ module fc_module
             f_bram_en <= 1'b0;
             f_we <= 1'b0;
           end
-          else if (S_AXIS_TLAST) s_axis_tready <= 1'b0;
           else s_axis_tready <= 1'b1;
         end
         STATE_RECEIVE_BIAS: begin
@@ -713,6 +703,7 @@ module fc_module
               if (receive_cnt == feat_size>>2) begin
                 w1_bram_en <= 1'b0;
                 w1_we <= 1'b0;
+                s_axis_tready <= 1'b0;
                 if (column_cnt == bias_size - 1) begin
                   state <= STATE_PSUM;
                   s_axis_tready <= 1'b0;
@@ -722,6 +713,7 @@ module fc_module
                   w2_we <= 1'b1;
                 end
               end
+              else s_axis_tready <= 1'b1;
             end
           end
           else if (weight_n == 2'b01) begin
@@ -729,15 +721,16 @@ module fc_module
               if (receive_cnt == feat_size>>2) begin
                 w2_bram_en <= 1'b0;
                 w2_we <= 1'b0;
+                s_axis_tready <= 1'b0;
                 if (column_cnt == bias_size - 1) begin
                   state <= STATE_PSUM;
-                  s_axis_tready <= 1'b0;
                 end
                 else begin
                   w3_bram_en <= 1'b1;
                   w3_we <= 1'b1;
                 end
               end
+              else s_axis_tready <= 1'b1;
             end
           end
           else if (weight_n == 2'b10) begin
@@ -745,15 +738,16 @@ module fc_module
               if (receive_cnt == feat_size>>2) begin
                 w3_bram_en <= 1'b0;
                 w3_we <= 1'b0;
+                s_axis_tready <= 1'b0;
                 if (column_cnt == bias_size - 1) begin
                   state <= STATE_PSUM;
-                  s_axis_tready <= 1'b0;
                 end
                 else begin
                   w4_bram_en <= 1'b1;
                   w4_we <= 1'b1;
                 end
               end
+              else s_axis_tready <= 1'b1;
             end
           end
           else if (weight_n == 2'b11) begin
@@ -761,15 +755,16 @@ module fc_module
               if (receive_cnt == feat_size>>2) begin
                 w4_bram_en <= 1'b0;
                 w4_we <= 1'b0;
+                s_axis_tready <= 1'b0;
                 if (column_cnt == bias_size - 1) begin
                   state <= STATE_PSUM;
-                  s_axis_tready <= 1'b0;
                 end
                 else begin
                   w1_bram_en <= 1'b1;
                   w1_we <= 1'b1;
                 end
               end
+              else s_axis_tready <= 1'b1;
             end
           end
           if (w4_addr[10]) begin
@@ -784,7 +779,6 @@ module fc_module
             w4_we <= 1'b0;
             s_axis_tready <= 1'b0;
           end
-          else s_axis_tready <= 1'b1;
         end
         STATE_READ_BIAS: begin
           f_bram_en <= 1'b1;
@@ -863,7 +857,7 @@ module fc_module
       p3_b <= 8'h00;
       p4_b <= 8'h00;
       cnt_4 <= 3'b000;   
-      receive_cnt <= 10'h000;   
+      receive_cnt <= 10'h000;
       f_receive_done <= 1'b0;
       b_receive_done <= 1'b0;
       w_receive_done <= 1'b0;
@@ -872,15 +866,14 @@ module fc_module
       case (state)
         STATE_IDLE: begin
           delay <= 1'b0;
-          
-          if (command[0]) begin
+          if (command[0] && !f_receive_done) begin
             feat_size <= size[10:0];            
             f_addr <= 11'b0;
           end
-          else if (command[1]) begin
+          else if (command[1] && !b_receive_done) begin
             f_addr <= 11'h200;
           end
-          else if (command[2]) begin            
+          else if (command[2] && !w_receive_done) begin            
             w1_addr <= 11'b0;
             w2_addr <= 11'b0;
             w3_addr <= 11'b0;
@@ -974,8 +967,6 @@ module fc_module
           end
           if (w4_addr[10]) begin
             receive_cnt <= 10'b0;
-            column_cnt <= 10'b0;
-            w_receive_done <= 1'b1;
           end
         end
         STATE_READ_BIAS: begin 
