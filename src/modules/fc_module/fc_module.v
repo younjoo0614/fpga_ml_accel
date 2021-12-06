@@ -706,7 +706,6 @@ module fc_module
                 s_axis_tready <= 1'b0;
                 if (column_cnt == bias_size - 1) begin
                   state <= STATE_PSUM;
-                  s_axis_tready <= 1'b0;
                 end
                 else begin
                   w2_bram_en <= 1'b1;
@@ -926,7 +925,7 @@ module fc_module
               receive_cnt <= receive_cnt + 1;
               if (receive_cnt == feat_size>>2) begin
                 receive_cnt <= 10'b0;
-                weight_n <= 2'b01;
+                weight_n <= 2'b10;
                 if (column_cnt == bias_size - 1) begin
                   column_cnt <= 10'b0;
                   w_receive_done <= 1'b1;
@@ -941,7 +940,7 @@ module fc_module
               receive_cnt <= receive_cnt + 1;
               if (receive_cnt == feat_size>>2) begin
                 receive_cnt <= 10'b0;
-                weight_n <= 2'b01;
+                weight_n <= 2'b11;
                 if (column_cnt == bias_size - 1) begin
                   column_cnt <= 10'b0;
                   w_receive_done <= 1'b1;
@@ -956,7 +955,7 @@ module fc_module
               receive_cnt <= receive_cnt + 1;
               if (receive_cnt == feat_size>>2) begin
                 receive_cnt <= 10'b0;
-                weight_n <= 2'b01;
+                weight_n <= 2'b00;
                 if (column_cnt == bias_size - 1) begin
                   column_cnt <= 10'b0;
                   w_receive_done <= 1'b1;
