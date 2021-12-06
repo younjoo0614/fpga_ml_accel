@@ -460,7 +460,7 @@ module fc_module
   reg [9:0] fb_addr;
   reg w1_we, w2_we, w3_we, w4_we, f_we;
   reg [1:0] weight_n;
-  reg [7:0] weight_cnt;
+  reg [10:0] receive_cnt, column_cnt;
   wire [31:0] w_dout, f_dout;
   // reg [31:0] din;
   wire [31:0] din;
@@ -578,8 +578,7 @@ module fc_module
     .of()
   );
 
-  // reg [31:0] feat_size, bias_size, weight_size;
-  reg [10:0] feat_size;
+  reg [10:0] feat_size, bias_size;
   reg fc_done;
 
   // assign FEAT_SIZE = feat_size;
@@ -658,22 +657,22 @@ module fc_module
           if (fc_start) begin
             if (command[0]) begin
               state <= STATE_RECEIVE_FEATURE;
-              s_axis_tready <= 1'b1;
-              f_addr <= 11'h000;
+              f_addr <= 11'b0;
               f_bram_en <= 1'b1;
               f_we <= 1'b1;
               feat_size <= size[10:0];
-            end
-            else if ( command[1]) begin
-              state <= STATE_RECEIVE_BIAS;
               s_axis_tready <= 1'b1;
+            end
+            else if (command[1]) begin
+              state <= STATE_RECEIVE_BIAS;
               b_addr <= 11'h200;
               f_bram_en <= 1'b1;
               f_we <= 1'b1;
+              bias_size <= size[10:0];
+              s_axis_tready <= 1'b1;
             end
             else if (command[2]) begin
               state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
-              s_axis_tready <= 1'b1;
               w1_bram_en <= 1'b1;
               w1_we <= 1'b1;
               w2_bram_en <= 1'b1;
@@ -689,64 +688,90 @@ module fc_module
           else s_axis_tready <= 1'b0;
         end
         STATE_RECEIVE_FEATURE: begin
-          if (S_AXIS_TLAST) begin            
+          if (receive_cnt == feat_size>>2) begin            
             state <= STATE_IDLE;
             s_axis_tready <= 1'b0;
             f_bram_en <= 1'b0;
             f_we <= 1'b0;
           end
+          else s_axis_tready <= 1'b1;
         end
         STATE_RECEIVE_BIAS: begin
-          if (S_AXIS_TLAST) begin            
+          if (receive_cnt == bias_size>>2) begin            
             state <= STATE_IDLE;
             s_axis_tready <= 1'b0;
             f_bram_en <= 1'b0;
             f_we <= 1'b0;
           end
+          else s_axis_tready <= 1'b1;
         end
 
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
           if (weight_n == 2'b00) begin
             if (w1_bram_en && w1_we) begin
-              if (weight_cnt >= feat_size>>2 - 1) begin
+              if (receive_cnt == feat_size>>2) begin
                 w1_bram_en <= 1'b0;
                 w1_we <= 1'b0;
-                w2_bram_en <= 1'b1;
-                w2_we <= 1'b1;
+                if (column_cnt == bias_size - 1) begin
+                  state <= STATE_PSUM;
+                  s_axis_tready <= 1'b0;
+                end
+                else begin
+                  w2_bram_en <= 1'b1;
+                  w2_we <= 1'b1;
+                end
               end
             end
           end
           else if (weight_n == 2'b01) begin
             if (w2_bram_en && w2_we) begin
-              if (weight_cnt >= feat_size>>2 - 1) begin
+              if (receive_cnt == feat_size>>2) begin
                 w2_bram_en <= 1'b0;
                 w2_we <= 1'b0;
-                w3_bram_en <= 1'b1;
-                w3_we <= 1'b1;
+                if (column_cnt == bias_size - 1) begin
+                  state <= STATE_PSUM;
+                  s_axis_tready <= 1'b0;
+                end
+                else begin
+                  w3_bram_en <= 1'b1;
+                  w3_we <= 1'b1;
+                end
               end
             end
           end
           else if (weight_n == 2'b10) begin
             if (w3_bram_en && w3_we) begin
-              if (weight_cnt >= feat_size>>2 - 1) begin
+              if (receive_cnt == feat_size>>2) begin
                 w3_bram_en <= 1'b0;
                 w3_we <= 1'b0;
-                w4_bram_en <= 1'b1;
-                w4_we <= 1'b1;
+                if (column_cnt == bias_size - 1) begin
+                  state <= STATE_PSUM;
+                  s_axis_tready <= 1'b0;
+                end
+                else begin
+                  w4_bram_en <= 1'b1;
+                  w4_we <= 1'b1;
+                end
               end
             end
           end
           else if (weight_n == 2'b11) begin
             if (w4_bram_en && w4_we) begin
-              if (weight_cnt >= feat_size>>2 - 1) begin
+              if (receive_cnt == feat_size>>2) begin
                 w4_bram_en <= 1'b0;
                 w4_we <= 1'b0;
-                w1_bram_en <= 1'b1;
-                w1_we <= 1'b1;
+                if (column_cnt == bias_size - 1) begin
+                  state <= STATE_PSUM;
+                  s_axis_tready <= 1'b0;
+                end
+                else begin
+                  w1_bram_en <= 1'b1;
+                  w1_we <= 1'b1;
+                end
               end
             end
           end
-          if (w4_addr[9:0] >= 10'd1023 || (!feat_size[10] && S_AXIS_TLAST)) begin
+          if (w4_addr[10]) begin
             state <= STATE_PSUM;
             w1_bram_en <= 1'b0;
             w1_we <= 1'b0;
@@ -758,6 +783,7 @@ module fc_module
             w4_we <= 1'b0;
             s_axis_tready <= 1'b0;
           end
+          else s_axis_tready <= 1'b1;
         end
         STATE_READ_BIAS: begin
           f_bram_en <= 1'b1;
@@ -861,16 +887,24 @@ module fc_module
           else ;
         end
         STATE_RECEIVE_FEATURE: begin
-          f_addr <= next_faddr;
-          fb_addr <= f_addr;
-          if (S_AXIS_TLAST) begin            
+          if (!S_AXIS_TLAST) begin
+            f_addr <= next_faddr;
+            receive_cnt <= receive_cnt + 1;
+            fb_addr <= f_addr;
+          end
+          if (receive_cnt == feat_size>>2) begin 
+            receive_cnt <= 10'h000;           
             f_receive_done <= 1'b1;
           end
         end
         STATE_RECEIVE_BIAS: begin
-          b_addr <= next_baddr;
-          fb_addr <= b_addr;
-          if (S_AXIS_TLAST) begin
+          if (!S_AXIS_TLAST) begin
+            b_addr <= next_baddr;
+            receive_cnt <= receive_cnt + 1;
+            fb_addr <= b_addr;
+          end          
+          if (receive_cnt == bias_size>>2) begin
+            receive_cnt <= 10'h000; 
             b_receive_done <= 1'b1;
           end
         end
@@ -878,45 +912,66 @@ module fc_module
           if (weight_n == 2'b00) begin
             if (w1_bram_en && w1_we) begin
               w1_addr <= next_w1addr;
-              weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size>>2 - 1) begin
-                weight_cnt <= 8'b0;
+              receive_cnt <= receive_cnt + 1;
+              if (receive_cnt == feat_size>>2) begin
+                receive_cnt <= 10'b0;
                 weight_n <= 2'b01;
+                if (column_cnt == bias_size - 1) begin
+                  column_cnt <= 10'b0;
+                  w_receive_done <= 1'b1;
+                end
+                else column_cnt <= column_cnt + 1;
               end
             end
           end
           else if (weight_n == 2'b01) begin
             if (w2_bram_en && w2_we) begin
               w2_addr <= next_w2addr;
-              weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size>>2 - 1) begin
-                weight_cnt <= 8'b0;
+              receive_cnt <= receive_cnt + 1;
+              if (receive_cnt == feat_size>>2) begin
+                receive_cnt <= 10'b0;
                 weight_n <= 2'b01;
+                if (column_cnt == bias_size - 1) begin
+                  column_cnt <= 10'b0;
+                  w_receive_done <= 1'b1;
+                end
+                else column_cnt <= column_cnt + 1;
               end
             end
           end
           else if (weight_n == 2'b10) begin
             if (w3_bram_en && w3_we) begin
               w3_addr <= next_w3addr;
-              weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size>>2 - 1) begin
-                weight_cnt <= 8'b0;
+              receive_cnt <= receive_cnt + 1;
+              if (receive_cnt == feat_size>>2) begin
+                receive_cnt <= 10'b0;
                 weight_n <= 2'b01;
+                if (column_cnt == bias_size - 1) begin
+                  column_cnt <= 10'b0;
+                  w_receive_done <= 1'b1;
+                end
+                else column_cnt <= column_cnt + 1;
               end
             end
           end
           else if (weight_n == 2'b11) begin
             if (w4_bram_en && w4_we) begin
               w4_addr <= next_w4addr;
-              weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size>>2 - 1) begin
-                weight_cnt <= 8'b0;
+              receive_cnt <= receive_cnt + 1;
+              if (receive_cnt == feat_size>>2) begin
+                receive_cnt <= 10'b0;
                 weight_n <= 2'b01;
+                if (column_cnt == bias_size - 1) begin
+                  column_cnt <= 10'b0;
+                  w_receive_done <= 1'b1;
+                end
+                else column_cnt <= column_cnt + 1;
               end
             end
           end
-          if (w4_addr[10] || (!feat_size[10] && S_AXIS_TLAST)) begin
-            weight_cnt <= 8'h00;
+          if (w4_addr[10]) begin
+            receive_cnt <= 10'b0;
+            column_cnt <= 10'b0;
             w_receive_done <= 1'b1;
           end
         end
