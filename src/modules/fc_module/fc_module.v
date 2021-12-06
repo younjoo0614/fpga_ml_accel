@@ -904,7 +904,6 @@ module fc_module
           if (weight_n == 2'b00) begin
             if (w1_bram_en && w1_we) begin
               w1_addr <= next_w1addr;
-              receive_cnt <= receive_cnt + 1;
               if (receive_cnt == feat_size>>2) begin
                 receive_cnt <= 10'b0;
                 weight_n <= 2'b01;
@@ -918,12 +917,12 @@ module fc_module
                 end
                 else column_cnt <= column_cnt + 1;
               end
+              else receive_cnt <= receive_cnt + 1;
             end
           end
           else if (weight_n == 2'b01) begin
             if (w2_bram_en && w2_we) begin
               w2_addr <= next_w2addr;
-              receive_cnt <= receive_cnt + 1;
               if (receive_cnt == feat_size>>2) begin
                 receive_cnt <= 10'b0;
                 weight_n <= 2'b10;
@@ -937,12 +936,12 @@ module fc_module
                 end
                 else column_cnt <= column_cnt + 1;
               end
+              else receive_cnt <= receive_cnt + 1;
             end
           end
           else if (weight_n == 2'b10) begin
             if (w3_bram_en && w3_we) begin
               w3_addr <= next_w3addr;
-              receive_cnt <= receive_cnt + 1;
               if (receive_cnt == feat_size>>2) begin
                 receive_cnt <= 10'b0;
                 weight_n <= 2'b11;
@@ -956,12 +955,12 @@ module fc_module
                 end
                 else column_cnt <= column_cnt + 1;
               end
+              else receive_cnt <= receive_cnt + 1;
             end
           end
           else if (weight_n == 2'b11) begin
             if (w4_bram_en && w4_we) begin
               w4_addr <= next_w4addr;
-              receive_cnt <= receive_cnt + 1;
               if (receive_cnt == feat_size>>2) begin
                 receive_cnt <= 10'b0;
                 weight_n <= 2'b00;
@@ -975,6 +974,7 @@ module fc_module
                 end
                 else column_cnt <= column_cnt + 1;
               end
+              else receive_cnt <= receive_cnt + 1;
             end
           end
           if (w4_addr[10]) begin
