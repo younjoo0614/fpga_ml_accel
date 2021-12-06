@@ -861,6 +861,7 @@ module fc_module
       w_receive_done <= 1'b0;
       column_cnt <= 10'h000;
       max_index <= 4'd10;
+      pe_delay <= 4'h0;
     end
     else begin
       case (state)
