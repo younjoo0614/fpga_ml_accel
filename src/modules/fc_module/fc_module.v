@@ -476,7 +476,7 @@ module fc_module
   reg f_bram_en, w1_bram_en, w2_bram_en, w3_bram_en, w4_bram_en;
   reg first1, first2, first3, first4;
   reg pe_1_en, pe_2_en, pe_3_en, pe_4_en;
-  reg [31:0] weight1, weight2, weight3, weight4, pre_weight2, pre_weight3, pre_weight4, feat , bias;
+  reg [31:0] weight1, weight2, weight3, weight4, post_weight2, post_weight3, post_weight4, feat , bias;
   reg [7:0] p1_a, p1_b, p2_b, p3_b, p4_b;
   reg f_receive_done, b_receive_done, w_receive_done;
   reg [3:0] pe_delay;
@@ -593,7 +593,7 @@ module fc_module
   CLA_16Bit faddr_adder (
     .A({6'h00,f_addr[9:0]}),
     .B(16'h0001),
-    .C_in(1'b1),
+    .C_in(1'b0),
     .S(next_faddr),
     .C_out()
   );
@@ -601,28 +601,28 @@ module fc_module
   CLA_16Bit w1addr_adder (
     .A({6'h00,w1_addr[9:0]}),
     .B(16'h0001),
-    .C_in(1'b1),
+    .C_in(1'b0),
     .S(next_w1addr),
     .C_out()
   );
   CLA_16Bit w2addr_adder (
     .A({6'h00, w2_addr[9:0]}),
     .B(16'h0001),
-    .C_in(1'b1),
+    .C_in(1'b0),
     .S(next_w2addr),
     .C_out()
   );
   CLA_16Bit w3addr_adder (
     .A({6'h00,w3_addr[9:0]}),
     .B(16'h0001),
-    .C_in(1'b1),
+    .C_in(1'b0),
     .S(next_w3addr),
     .C_out()
   );
   CLA_16Bit w4addr_adder (
     .A({6'h00,w4_addr[9:0]}),
     .B(16'h0001),
-    .C_in(1'b1),
+    .C_in(1'b0),
     .S(next_w4addr),
     .C_out()
   );
@@ -630,7 +630,7 @@ module fc_module
   CLA_16Bit baddr_adder (
     .A({6'h00,b_addr[9:0]}),
     .B(16'h0001),
-    .C_in(1'b1),
+    .C_in(1'b0),
     .S(next_baddr),
     .C_out()
   );
@@ -910,8 +910,8 @@ module fc_module
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
           if (weight_n == 2'b00) begin
             if (w1_bram_en && w1_we) begin
-              w1_addr <= next_w1addr;
-              receive_cnt <= receive_cnt + 1;
+              if (s_axis_tready) w1_addr <= next_w1addr;
+              receive_cnt <= receive_cnt + 1; //receive_cnt if 문 넣어야 할 듯
               if (receive_cnt == feat_size>>2) begin
                 receive_cnt <= 10'b0;
                 weight_n <= 2'b01;
@@ -929,7 +929,7 @@ module fc_module
           end
           else if (weight_n == 2'b01) begin
             if (w2_bram_en && w2_we) begin
-              w2_addr <= next_w2addr;
+              if (s_axis_tready)w2_addr <= next_w2addr;
               receive_cnt <= receive_cnt + 1;
               if (receive_cnt == feat_size>>2) begin
                 receive_cnt <= 10'b0;
@@ -948,7 +948,7 @@ module fc_module
           end
           else if (weight_n == 2'b10) begin
             if (w3_bram_en && w3_we) begin
-              w3_addr <= next_w3addr;
+              if (s_axis_tready)w3_addr <= next_w3addr;
               receive_cnt <= receive_cnt + 1;
               if (receive_cnt == feat_size>>2) begin
                 receive_cnt <= 10'b0;
@@ -967,7 +967,7 @@ module fc_module
           end
           else if (weight_n == 2'b11) begin
             if (w4_bram_en && w4_we) begin
-              w4_addr <= next_w4addr;
+              if (s_axis_tready)w4_addr <= next_w4addr;
               receive_cnt <= receive_cnt + 1;
               if (receive_cnt == feat_size>>2) begin
                 receive_cnt <= 10'b0;
@@ -1004,7 +1004,7 @@ module fc_module
           end          
         end
         STATE_COMPUTE: begin          
-          cnt_4 = cnt_4 +1;
+          cnt_4 = cnt_4 + 1;
           if (cnt_4[2]) begin //4개 연산할 때마다  
             cnt_4 <= 3'b000;
             f_addr <= next_faddr;
@@ -1012,24 +1012,24 @@ module fc_module
             w2_addr <= next_w2addr;
             w3_addr <= next_w3addr;
             w4_addr <= next_w4addr;
-            pre_weight2 <= weight2;
-            pre_weight3 <= weight3;
-            pre_weight4 <= weight4;
+            post_weight2 <= weight2;
+            post_weight3 <= weight3;
+            post_weight4 <= weight4;
             weight1 <= 32'h00000000;
             weight2 <= 32'h00000000;
             weight3 <= 32'h00000000;
             weight4 <= 32'h00000000;
             if (feat_size[10] && f_addr[10]) begin //column 계산 끝났을 때
               f_addr <= 10'h000;
-              pre_weight2 <= 32'h00000000;
+              post_weight2 <= 32'h00000000;
             end
             else if (feat_size[8] && f_addr[8]) begin
               f_addr <= 10'h000;
-              pre_weight3 <= 32'h00000000;
+              post_weight3 <= 32'h00000000;
             end
             else if (feat_size[6] && f_addr[6])begin
               f_addr <= 10'h000;
-              pre_weight4 <= 32'h00000000;
+              post_weight4 <= 32'h00000000;
             end
           end
           else if (f_addr[9:0] == 10'h000)begin //첫 4개 할 때
@@ -1042,14 +1042,14 @@ module fc_module
               first1 <= 1'b0;  
               p1_b <= weight1[15:8]; //index 주의
               p2_b <= weight2[7:0];
-              p3_b <= pre_weight3[31:24];
-              p4_b <= pre_weight4[23:16];                
+              p3_b <= post_weight3[31:24];
+              p4_b <= post_weight4[23:16];                
             end
             else if (cnt_4 == 3'b010) begin
               p1_b <= weight1[23:16]; //index 주의
               p2_b <= weight2[15:8];
               p3_b <= weight3[7:0];
-              p4_b <= pre_weight4[31:24];
+              p4_b <= post_weight4[31:24];
             end
             else if (cnt_4 == 3'b011) begin
               p1_b <= weight1[31:24]; //index 주의
@@ -1064,9 +1064,9 @@ module fc_module
               pe_3_en <= 1'b1;
               pe_4_en <= 1'b1;
               p1_b <= weight1[7:0]; //index 주의
-              p2_b <= pre_weight2[31:24];
-              p3_b <= pre_weight3[23:16];
-              p4_b <= pre_weight4[15:8];
+              p2_b <= post_weight2[31:24];
+              p3_b <= post_weight3[23:16];
+              p4_b <= post_weight4[15:8];
             end          
           end  
           else begin // 첫 4개도 아니고 cnt_4도 4가 아닐 때 
@@ -1078,14 +1078,14 @@ module fc_module
               first1 <= 1'b0;  
               p1_b <= weight1[15:8]; //index 주의
               p2_b <= weight2[7:0];
-              p3_b <= pre_weight3[31:24];
-              p4_b <= pre_weight4[23:16];                
+              p3_b <= post_weight3[31:24];
+              p4_b <= post_weight4[23:16];                
             end
             else if (cnt_4 == 3'b010) begin
               p1_b <= weight1[23:16]; //index 주의
               p2_b <= weight2[15:8];
               p3_b <= weight3[7:0];
-              p4_b <= pre_weight4[31:24];
+              p4_b <= post_weight4[31:24];
             end
             else if (cnt_4 == 3'b011) begin
               p1_b <= weight1[31:24]; //index 주의
@@ -1095,14 +1095,14 @@ module fc_module
             end
             else if (cnt_4 == 3'b000)begin
               p1_b <= weight1[7:0]; //index 주의
-              p2_b <= pre_weight2[31:24];
-              p3_b <= pre_weight3[23:16];
-              p4_b <= pre_weight4[15:8];
+              p2_b <= post_weight2[31:24];
+              p3_b <= post_weight3[23:16];
+              p4_b <= post_weight4[15:8];
             end          
           end        
         end
         STATE_PSUM: begin          
-          if (!delay[0]) begin
+          if (!delay[1]) begin
             delay <= delay +1;
           end
           else begin
