@@ -423,7 +423,8 @@ module fc_module
     input wire [20:0] size,
     // output wire [31:0] FEAT_SIZE, BIAS_SIZE, WEIGHT_SIZE,
 
-    output wire F_writedone, B_writedone, W_writedone, FC_DONE
+    output wire F_writedone, B_writedone, W_writedone, FC_DONE,
+    output reg[3:0] max_index
   ); 
 
   localparam STATE_IDLE = 4'd0,
@@ -815,13 +816,17 @@ module fc_module
           if (pe_delay[3]) state <= STATE_WRITE_RESULT;
         end
         STATE_SEND_RESULT: begin
-          m_axis_tvalid <= 1'b1;
-          state <= STATE_COMPUTE;
-          if (b_addr[9] && b_addr[8]) begin
+          m_axis_tvalid <= 1'b1;          
+          
+          if (b_addr[9] && (b_addr[8:0]==bias_size>>2)) begin
             m_axis_tlast <= 1'b1;
-            fc_done <= 1'b1;
+            fc_done <= 1'b1;            
             state <= STATE_IDLE;
           end
+          else if (w4_addr[10])begin
+            state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
+          end
+          else state <= STATE_COMPUTE;
         end
       endcase
     end
@@ -860,6 +865,8 @@ module fc_module
       f_receive_done <= 1'b0;
       b_receive_done <= 1'b0;
       w_receive_done <= 1'b0;
+      column_cnt <= 10'h000;
+      max_index <= 4'd10;
     end
     else begin
       case (state)
