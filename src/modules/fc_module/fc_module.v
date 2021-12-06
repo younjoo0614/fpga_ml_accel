@@ -655,7 +655,7 @@ module fc_module
         STATE_IDLE: begin
           fc_done <= 1'b0;
           if (fc_start) begin
-            if (command[0]) begin
+            if (command[0] && !f_receive_done) begin
               state <= STATE_RECEIVE_FEATURE;
               f_addr <= 11'b0;
               f_bram_en <= 1'b1;
@@ -663,7 +663,7 @@ module fc_module
               feat_size <= size[10:0];
               s_axis_tready <= 1'b1;
             end
-            else if (command[1]) begin
+            else if (command[1] && !b_receive_done) begin
               state <= STATE_RECEIVE_BIAS;
               b_addr <= 11'h200;
               f_bram_en <= 1'b1;
@@ -671,7 +671,7 @@ module fc_module
               bias_size <= size[10:0];
               s_axis_tready <= 1'b1;
             end
-            else if (command[2]) begin
+            else if (command[2] && !w_receive_done) begin
               state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
               w1_bram_en <= 1'b1;
               w1_we <= 1'b1;
@@ -864,14 +864,15 @@ module fc_module
       p4_b <= 8'h00;
       cnt_4 <= 3'b000;   
       receive_cnt <= 10'h000;   
+      f_receive_done <= 1'b0;
+      b_receive_done <= 1'b0;
+      w_receive_done <= 1'b0;
     end
     else begin
       case (state)
         STATE_IDLE: begin
           delay <= 1'b0;
-          f_receive_done <= 1'b0;
-          b_receive_done <= 1'b0;
-          w_receive_done <= 1'b0;
+          
           if (command[0]) begin
             feat_size <= size[10:0];            
             f_addr <= 11'b0;
