@@ -627,7 +627,7 @@ module fc_module
   // assign WEIGHT_SIZE = weight_size;
   assign FC_DONE = fc_done;
 
-  reg [5:0] cnt_4;
+  reg [2:0] cnt_4;
 
   wire [15:0] next_faddr, next_w1addr, next_w2addr, next_w3addr, next_w4addr, next_baddr, next_cnt;
   CLA_16Bit faddr_adder (
@@ -839,6 +839,10 @@ module fc_module
           w2_bram_en <= 1'b1;
           w3_bram_en <= 1'b1;
           w4_bram_en <= 1'b1;
+          pe_1_en <= 1'b0;
+          pe_2_en <= 1'b0;
+          pe_3_en <= 1'b0;
+          pe_4_en <= 1'b0; 
           if (delay[1]) begin            
             if (feat_size[10] && f_addr[8]) state <= STATE_READ_BIAS;
             else if (feat_size[8] && f_addr[6]) state <= STATE_READ_BIAS;
@@ -856,7 +860,7 @@ module fc_module
         STATE_SEND_RESULT: begin
           if (delay == 2'b11) begin
             m_axis_tvalid <= 1'b1;
-            if (b_addr[9] && (b_addr[8:0]==bias_size>>2)) begin
+            if (b_addr[8:0]==bias_size>>2) begin
               m_axis_tlast <= 1'b1;
               fc_done <= 1'b1;            
               state <= STATE_IDLE;
@@ -1051,6 +1055,11 @@ module fc_module
           end          
           else begin //cnt_4 =0
             if (~|f_addr) begin
+              f_addr <= next_faddr[10:0];
+              w1_addr <= next_w1addr[10:0];
+              w2_addr <= next_w2addr[10:0];
+              w3_addr <= next_w3addr[10:0];
+              w4_addr <= next_w4addr[10:0];
               first1 <= 1'b1;
               first2 <= 1'b1;
               first3 <= 1'b1;
@@ -1067,12 +1076,14 @@ module fc_module
             delay <= delay +1;            
           end
           else begin
-            delay <= 2'b00;
-            f_addr <= next_faddr[10:0];
-            w1_addr <= next_w1addr[10:0];
-            w2_addr <= next_w2addr[10:0];
-            w3_addr <= next_w3addr[10:0];
-            w4_addr <= next_w4addr[10:0];
+            delay <= 2'b00;  
+            if (|f_addr) begin
+              f_addr <= next_faddr[10:0];
+              w1_addr <= next_w1addr[10:0];
+              w2_addr <= next_w2addr[10:0];
+              w3_addr <= next_w3addr[10:0];
+              w4_addr <= next_w4addr[10:0];
+            end            
             weight1[63:32] <= {w1_dout[7:0],w1_dout[15:8], w1_dout[23:16], w1_dout[31:24]};
             weight2[55:24] <= {w2_dout[7:0],w2_dout[15:8], w2_dout[23:16], w2_dout[31:24]};
             weight3[47:16] <= {w3_dout[7:0],w3_dout[15:8], w3_dout[23:16], w3_dout[31:24]};
