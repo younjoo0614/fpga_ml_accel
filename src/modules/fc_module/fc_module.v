@@ -853,7 +853,7 @@ module fc_module
           else ;
         end
         STATE_RECEIVE_FEATURE: begin
-          f_addr <= f_addr + next_faddr;
+          f_addr <= next_faddr;
           fb_addr <= f_addr;
           if (S_AXIS_TLAST) begin            
             f_receive_done <= 1'b1;
