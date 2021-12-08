@@ -511,8 +511,10 @@ module fc_module
   reg f_bram_en, w1_bram_en, w2_bram_en, w3_bram_en, w4_bram_en;
   reg first1, first2, first3, first4;
   reg pe_1_en, pe_2_en, pe_3_en, pe_4_en;
-  reg [31:0] weight1, weight2, weight3, weight4, post_weight2, post_weight3, post_weight4, feat , bias;
-  reg [7:0] p1_a, p1_b, p2_b, p3_b, p4_b;
+  reg [31:0] feat , bias;
+  reg [63:0] weight1, weight2, weight3, weight4;
+  reg [7:0] p1_a;
+  wire [7:0] p1_b, p2_b, p3_b, p4_b;
   reg f_receive_done, b_receive_done, w_receive_done;
   reg [3:0] pe_delay;
   wire [31:0] w1_dout, w2_dout, w3_dout, w4_dout;
@@ -905,7 +907,11 @@ module fc_module
    .S(bias_add_result),
    .C_out()
  );
-
+  
+  assign p1_b = weight1[63:32];
+  assign p2_b = weight2[63:32];
+  assign p3_b = weight3[63:32];
+  assign p4_b = weight4[63:32];
   
   // data path
   always @(posedge clk) begin
@@ -917,10 +923,6 @@ module fc_module
       w3_addr <= 10'h000;
       w4_addr <= 10'h000;
       first1 <= 1'b0;
-      p1_b <= 8'h00;
-      p2_b <= 8'h00;
-      p3_b <= 8'h00;
-      p4_b <= 8'h00;
       cnt_4 <= 3'b000;   
       receive_cnt <= 10'h000;
       f_receive_done <= 1'b0;
@@ -930,6 +932,10 @@ module fc_module
       max_idx <= 4'd10;
       max_value <= 8'h80;
       pe_delay <= 4'h0;
+      weight1 <= 64'h0000_0000_0000_0000;
+      weight2 <= 64'h0000_0000_0000_0000;
+      weight3 <= 64'h0000_0000_0000_0000;
+      weight4 <= 64'h0000_0000_0000_0000;
     end
     else begin
       case (state)
@@ -1070,115 +1076,58 @@ module fc_module
           end          
         end
         STATE_COMPUTE: begin          
-          cnt_4 = cnt_4 + 1;
-          if (cnt_4[2]) begin //4개 연산할 때마다  
-            cnt_4 <= 3'b000;
-            f_addr <= next_faddr;
-            w1_addr <= next_w1addr;
-            w2_addr <= next_w2addr;
-            w3_addr <= next_w3addr;
-            w4_addr <= next_w4addr;
-            post_weight2 <= weight2;
-            post_weight3 <= weight3;
-            post_weight4 <= weight4;
-            weight1 <= 32'h00000000;
-            weight2 <= 32'h00000000;
-            weight3 <= 32'h00000000;
-            weight4 <= 32'h00000000;
-            if (feat_size[10] && f_addr[10]) begin //column 계산 끝났을 때
+          cnt_4 <= cnt_4 + 1;
+          if (cnt_4[2]) begin  //cnt_4 =4
+            weight1 <= weight1 << 8;
+            weight1 <= weight1 << 8;
+            weight1 <= weight1 << 8;
+            weight1 <= weight1 << 8;
+            pe_1_en <= 1'b0;
+            pe_2_en <= 1'b0;
+            pe_3_en <= 1'b0;
+            pe_4_en <= 1'b0;     
+            if (f_addr[10] && feat_size[10]) begin //column 다 읽었을 때
               f_addr <= 10'h000;
-              post_weight2 <= 32'h00000000;
             end
-            else if (feat_size[8] && f_addr[8]) begin
+            else if (f_addr[10] && feat_size[10]) begin
               f_addr <= 10'h000;
-              post_weight3 <= 32'h00000000;
             end
-            else if (feat_size[6] && f_addr[6])begin
+            else if (f_addr[10] && feat_size[10]) begin
               f_addr <= 10'h000;
-              post_weight4 <= 32'h00000000;
             end
           end
-          else if (f_addr[9:0] == 10'h000)begin //첫 4개 할 때
-            p1_a <= feat[cnt_4<<3-:8];
-            first2 <= first1;
-            first3 <= first2;
-            first4 <= first3;
-            
-            if (first1) begin //cnt_4 1일 때
-              first1 <= 1'b0;  
-              p1_b <= weight1[15:8]; //index 주의
-              p2_b <= weight2[7:0];
-              p3_b <= post_weight3[31:24];
-              p4_b <= post_weight4[23:16];                
-            end
-            else if (cnt_4 == 3'b010) begin
-              p1_b <= weight1[23:16]; //index 주의
-              p2_b <= weight2[15:8];
-              p3_b <= weight3[7:0];
-              p4_b <= post_weight4[31:24];
-            end
-            else if (cnt_4 == 3'b011) begin
-              p1_b <= weight1[31:24]; //index 주의
-              p2_b <= weight2[23:16];
-              p3_b <= weight3[15:8];
-              p4_b <= weight4[7:0];
-            end
-            else if (cnt_4 == 3'b000)begin
+          else if (cnt_4[1] || cnt_4[0]) begin //cnt_4 =3 or 2 or 1
+            weight1 <= weight1 << 8;
+            weight1 <= weight1 << 8;
+            weight1 <= weight1 << 8;
+            weight1 <= weight1 << 8;
+          end
+          
+          else begin //cnt_4 =0
+            if (~|f_addr) begin
               first1 <= 1'b1;
-              pe_1_en <= 1'b1;
-              pe_2_en <= 1'b1;
-              pe_3_en <= 1'b1;
-              pe_4_en <= 1'b1;
-              p1_b <= weight1[7:0]; //index 주의
-              p2_b <= post_weight2[31:24];
-              p3_b <= post_weight3[23:16];
-              p4_b <= post_weight4[15:8];
-            end          
-          end  
-          else begin // 첫 4개도 아니고 cnt_4도 4가 아닐 때 
+              first2 <= 1'b1;
+              first3 <= 1'b1;
+              first4 <= 1'b1;
+            end
             pe_1_en <= 1'b1;
             pe_2_en <= 1'b1;
             pe_3_en <= 1'b1;
-            pe_4_en <= 1'b1;
-            if (cnt_4 == 3'b001) begin //cnt_4 1일 때
-              first1 <= 1'b0;  
-              p1_b <= weight1[15:8]; //index 주의
-              p2_b <= weight2[7:0];
-              p3_b <= post_weight3[31:24];
-              p4_b <= post_weight4[23:16];                
-            end
-            else if (cnt_4 == 3'b010) begin
-              p1_b <= weight1[23:16]; //index 주의
-              p2_b <= weight2[15:8];
-              p3_b <= weight3[7:0];
-              p4_b <= post_weight4[31:24];
-            end
-            else if (cnt_4 == 3'b011) begin
-              p1_b <= weight1[31:24]; //index 주의
-              p2_b <= weight2[23:16];
-              p3_b <= weight3[15:8];
-              p4_b <= weight4[7:0];
-            end
-            else if (cnt_4 == 3'b000)begin
-              p1_b <= weight1[7:0]; //index 주의
-              p2_b <= post_weight2[31:24];
-              p3_b <= post_weight3[23:16];
-              p4_b <= post_weight4[15:8];
-            end          
-          end        
+            pe_4_en <= 1'b1;            
+          end
         end
         STATE_PSUM: begin          
-          if (!delay[1]) begin
+          if (delay == 2'b00) begin
             delay <= delay +1;
+            fb_addr <= f_addr;
           end
           else begin
             delay <= 2'b00;
-            weight1 <= w1_dout;
-            weight2 <= w2_dout;
-            weight3 <= w3_dout;
-            weight4 <= w4_dout;
-            f_addr <= next_faddr;
-            feat <= f_dout;
+            weight1[63:32] <= {w1_dout[7:0],w1_dout[15:8], w1_dout[23:16], w1_dout[31:24]};
+            weight2[55:24] <= {w2_dout[7:0],w2_dout[15:8], w2_dout[23:16], w2_dout[31:24]};
+            weight3[47:16] <= {w3_dout[7:0],w3_dout[15:8], w3_dout[23:16], w3_dout[31:24]};
+            weight4[39:8] <= {w4_dout[7:0],w4_dout[15:8], w4_dout[23:16], w4_dout[31:24]};            
+            feat <= {f_dout[7:0], f_dout[15:8], f_dout[23:16], f_dout[31:24]};
           end
         end
 
