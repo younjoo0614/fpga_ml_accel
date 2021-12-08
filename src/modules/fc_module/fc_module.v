@@ -55,6 +55,28 @@ module CLA_16Bit (
   CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(C_out_LCU[3]), .p_g(P[3]), .g_g(G[3]), .of());
 endmodule
 
+module COMP_8Bit(
+  input [7:0] A,
+  input [7:0] B,
+
+  output comp
+ );
+  wire [1:0] C_out_LCU;
+  wire [1:0] P;
+  wire [1:0] G;
+
+  wire [7:0] A_1;
+
+  reg [7:0] S;
+  assign comp = S[7];
+
+  assign A_1 = ~A;
+
+  CLG2 clg2(.C_in(1'b1), .p(P), .g(G), .C_out(C_out_LCU));
+  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(1'b1), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
+endmodule
+
 module CLG4
 (
   input C_in,
@@ -88,6 +110,18 @@ assign C_out[1] = g[1] | (p[1] & C_out[0]);
 assign C_out[2] = g[2] | (p[2] & C_out[1]);
 //--------------------------------------------------------------
 
+endmodule
+
+module CLG2
+(
+  input C_in,
+  input [1:0] p,
+  input [1:0] g,
+
+  output [1:0] C_out
+);
+  assign C_out[0] = g[0] | (p[0] & C_in);
+  assign C_out[1] = g[1] | (p[1] & C_out[0]);
 endmodule
 
 
@@ -424,7 +458,7 @@ module fc_module
     // output wire [31:0] FEAT_SIZE, BIAS_SIZE, WEIGHT_SIZE,
 
     output wire F_writedone, B_writedone, W_writedone, FC_DONE,
-    output reg[3:0] max_index
+    output wire [3:0] MAX_idx
   ); 
 
   localparam STATE_IDLE = 4'd0,
@@ -483,10 +517,14 @@ module fc_module
   reg f_receive_done, b_receive_done, w_receive_done;
   reg [3:0] pe_delay;
   wire [31:0] w1_dout, w2_dout, w3_dout, w4_dout;
+  reg [3:0] max_idx;
+  reg [7:0] max_value;
+  reg max_comp1, max_comp2, max_comp3, max_comp4;
 
   assign F_writedone = f_receive_done;
   assign B_writedone = b_receive_done;
   assign W_writedone = w_receive_done;
+  assign MAX_idx = max_idx;
 
   sram_32x1024 weight1_sram_32x1024(
   .addra(w1_addr[9:0]),
@@ -635,6 +673,34 @@ module fc_module
     .C_in(1'b0),
     .S(next_baddr),
     .C_out()
+  );
+
+  COMP_8Bit tdata_max_comp1 (
+    .A(max_value),
+    .B(tdata[7:0]),
+
+    .comp(max_comp1)
+  );
+
+  COMP_8Bit tdata_max_comp2 (
+    .A(max_value),
+    .B(tdata[15:8]),
+
+    .comp(max_comp2)
+  );
+
+  COMP_8Bit tdata_max_comp3 (
+    .A(max_value),
+    .B(tdata[23:16]),
+
+    .comp(max_comp3)
+  );
+
+  COMP_8Bit tdata_max_comp4 (
+    .A(max_value),
+    .B(tdata[31:24]),
+    
+    .comp(max_comp4)
   );
 
   // control path
@@ -812,17 +878,18 @@ module fc_module
           if (pe_delay[3]) state <= STATE_WRITE_RESULT;
         end
         STATE_SEND_RESULT: begin
-          m_axis_tvalid <= 1'b1;          
-          
-          if (b_addr[9] && (b_addr[8:0]==bias_size>>2)) begin
-            m_axis_tlast <= 1'b1;
-            fc_done <= 1'b1;            
-            state <= STATE_IDLE;
+          if (delay == 2'b11) begin
+            m_axis_tvalid <= 1'b1;
+            if (b_addr[9] && (b_addr[8:0]==bias_size>>2)) begin
+              m_axis_tlast <= 1'b1;
+              fc_done <= 1'b1;            
+              state <= STATE_IDLE;
+            end
+            else if (w4_addr[10]) begin
+              state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
+            end
+            else state <= STATE_COMPUTE;
           end
-          else if (w4_addr[10])begin
-            state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
-          end
-          else state <= STATE_COMPUTE;
         end
       endcase
     end
@@ -862,7 +929,8 @@ module fc_module
       b_receive_done <= 1'b0;
       w_receive_done <= 1'b0;
       column_cnt <= 10'h000;
-      max_index <= 4'd10;
+      max_idx <= 4'd10;
+      max_value <= 8'h80;
       pe_delay <= 4'h0;
       weight1 <= 64'h0000_0000_0000_0000;
       weight2 <= 64'h0000_0000_0000_0000;
@@ -1001,7 +1069,7 @@ module fc_module
         end
         STATE_READ_BIAS: begin 
           if (delay == 2'b00) begin
-            b_addr <= next_baddr ;
+            b_addr <= next_baddr;
             fb_addr <= b_addr;
             delay <= delay +1;
           end
@@ -1101,10 +1169,38 @@ module fc_module
           tdata[22:16] <= bias_add_result3[27] ? (8'b0000_0000) : 
                           ((bias_add_result3[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result3[12:6]} : 8'b0111_1111);
           tdata[30:24] <= bias_add_result4[27] ? (8'b0000_0000) : 
-                          ((bias_add_result4[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);   
+                          ((bias_add_result4[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);
+          delay <= 1'b0;
         end
         STATE_SEND_RESULT: begin
           m_axis_tdata <= tdata;
+          delay <= delay + 1;
+          if (bias_size == 11'd10) begin
+            if (delay == 2'b00) begin
+              if (!max_comp1) begin
+                max_idx <= 4*(b_addr[1:0]-1);
+                max_value <= tdata[7:0];
+              end
+            end
+            else if (delay == 2'b01) begin
+              if (!max_comp2) begin
+                max_idx <= 4*(b_addr[1:0]-1)+1;
+                max_value <= tdata[15:8];
+              end              
+            end
+            else if (delay == 2'b10) begin
+              if (!max_comp3) begin
+                max_idx <= 4*(b_addr[1:0]-1)+2;
+                max_value <= tdata[23:16];
+              end              
+            end
+            else if (delay == 2'b11) begin
+              if (!max_comp4) begin
+                max_idx <= 4*(b_addr[1:0]-1)+3;
+                max_value <= tdata[31:24];
+              end            
+            end
+          end
         end
       endcase
     end
