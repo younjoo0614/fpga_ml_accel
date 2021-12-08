@@ -952,7 +952,7 @@ module fc_module
             b_addr <= next_baddr[10:0];
             receive_cnt <= next_cnt[10:0];
           end          
-          if (next_cnt[10:0] == bias_size>>2 ) begin
+          if (next_cnt[10:0] == bias_size>>2) begin
             b_addr <= 10'h200;
             receive_cnt <= 10'h000; 
             b_receive_done <= 1'b1;
@@ -1121,7 +1121,7 @@ module fc_module
                           ((bias_add_result3[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result3[12:6]} : 8'b0111_1111);
           tdata[30:24] <= bias_add_result4[27] ? (8'b0000_0000) : 
                           ((bias_add_result4[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);
-          delay <= 1'b0;
+          delay <= 2'b00;
         end
         STATE_SEND_RESULT: begin
           m_axis_tdata <= tdata;
