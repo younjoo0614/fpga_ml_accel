@@ -771,52 +771,63 @@ module fc_module
         end
 
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
-          if (next_cnt[10:0] == feat_size>>2) begin
-            if (column_cnt == bias_size - 1) begin
-              s_axis_tready <= 1'b0;
-              state <= STATE_PSUM;
-              w1_bram_en <= 1'b0;
-              w1_we <= 1'b0;
-              w2_bram_en <= 1'b0;
-              w2_we <= 1'b0;
-              w3_bram_en <= 1'b0;
-              w3_we <= 1'b0;
-              w4_bram_en <= 1'b0;
-              w4_we <= 1'b0;
-            end
-            else begin
-              case (weight_n)
-                2'b00: begin
-                  w1_bram_en <= 1'b0;
-                  w1_we <= 1'b0;
-                  w2_bram_en <= 1'b1;
-                  w2_we <= 1'b1;
-                end
-                2'b01: begin
-                  w2_bram_en <= 1'b0;
-                  w2_we <= 1'b0;
-                  w3_bram_en <= 1'b1;
-                  w3_we <= 1'b1;
-                end
-                2'b10: begin
-                  w3_bram_en <= 1'b0;
-                  w3_we <= 1'b0;
-                  w4_bram_en <= 1'b1;
-                  w4_we <= 1'b1;
-                end
-                2'b11: begin
-                  w4_bram_en <= 1'b0;
-                  w4_we <= 1'b0;
-                  if (next_w4addr[10]) state <= STATE_PSUM;
-                  else begin
-                    w1_bram_en <= 1'b1;
-                    w1_we <= 1'b1;
+          if (S_AXIS_TVALID) begin
+            if (next_cnt[10:0] == feat_size>>2) begin
+              if (column_cnt == bias_size - 1) begin
+                s_axis_tready <= 1'b0;
+                state <= STATE_PSUM;
+                f_bram_en <= 1'b1;
+                w1_bram_en <= 1'b1;
+                w1_we <= 1'b0;
+                w2_bram_en <= 1'b1;
+                w2_we <= 1'b0;
+                w3_bram_en <= 1'b1;
+                w3_we <= 1'b0;
+                w4_bram_en <= 1'b1;
+                w4_we <= 1'b0;
+              end
+              else begin
+                case (weight_n)
+                  2'b00: begin
+                    w1_bram_en <= 1'b0;
+                    w1_we <= 1'b0;
+                    w2_bram_en <= 1'b1;
+                    w2_we <= 1'b1;
                   end
-                end
-                default: ;
-              endcase
+                  2'b01: begin
+                    w2_bram_en <= 1'b0;
+                    w2_we <= 1'b0;
+                    w3_bram_en <= 1'b1;
+                    w3_we <= 1'b1;
+                  end
+                  2'b10: begin
+                    w3_bram_en <= 1'b0;
+                    w3_we <= 1'b0;
+                    w4_bram_en <= 1'b1;
+                    w4_we <= 1'b1;
+                  end
+                  2'b11: begin
+                    w4_bram_en <= 1'b0;
+                    w4_we <= 1'b0;
+                    if (next_w4addr[10]) begin
+                      state <= STATE_PSUM;
+                      f_bram_en <= 1'b1;
+                      w1_bram_en <= 1'b1;
+                      w2_bram_en <= 1'b1;
+                      w3_bram_en <= 1'b1;
+                      w4_bram_en <= 1'b1;   
+                    end
+                    else begin
+                      w1_bram_en <= 1'b1;
+                      w1_we <= 1'b1;
+                    end
+                  end
+                  default: ;
+                endcase
+              end
             end
           end
+          
         end
         STATE_READ_BIAS: begin
           if (delay[1]) begin
@@ -824,50 +835,130 @@ module fc_module
           end
         end
         STATE_COMPUTE: begin
-          m_axis_tvalid <= 1'b0;
-          f_bram_en <= 1'b0;
-          w1_bram_en <= 1'b0;
-          w2_bram_en <= 1'b0;
-          w3_bram_en <= 1'b0;
-          w4_bram_en <= 1'b0;
-          if (cnt_4[1] && cnt_4[0]) state <= STATE_PSUM;          
+          m_axis_tvalid <= 1'b0;          
+          if (cnt_4[1] && cnt_4[0]) begin
+            if (feat_size[10] && f_addr[8]) begin
+              if (delay[1] && delay[0]) begin
+                state <= STATE_PSUM;  
+                delay <= 2'b00;
+                pe_1_en <= 1'b0;
+                pe_2_en <= 1'b0;
+                pe_3_en <= 1'b0;
+                pe_4_en <= 1'b0;  
+                f_bram_en <= 1'b1;
+                w1_bram_en <= 1'b1;
+                w2_bram_en <= 1'b1;
+                w3_bram_en <= 1'b1;
+                w4_bram_en <= 1'b1;   
+              end
+            end
+            else if (feat_size[8] && f_addr[6]) begin
+              if (delay[1] && delay[0]) begin
+                state <= STATE_PSUM;  
+                delay <= 2'b00;
+                pe_1_en <= 1'b0;
+                pe_2_en <= 1'b0;
+                pe_3_en <= 1'b0;
+                pe_4_en <= 1'b0;  
+                f_bram_en <= 1'b1;
+                w1_bram_en <= 1'b1;
+                w2_bram_en <= 1'b1;
+                w3_bram_en <= 1'b1;
+                w4_bram_en <= 1'b1;   
+              end
+            end
+            else if (feat_size[6] && f_addr[4]) begin
+              if (delay[1] && delay[0]) begin
+                state <= STATE_PSUM;  
+                delay <= 2'b00;
+                pe_1_en <= 1'b0;
+                pe_2_en <= 1'b0;
+                pe_3_en <= 1'b0;
+                pe_4_en <= 1'b0;  
+                f_bram_en <= 1'b1;
+                w1_bram_en <= 1'b1;
+                w2_bram_en <= 1'b1;
+                w3_bram_en <= 1'b1;
+                w4_bram_en <= 1'b1;   
+              end
+            end
+            else begin
+              state <= STATE_PSUM;  
+              pe_1_en <= 1'b0;
+              pe_2_en <= 1'b0;
+              pe_3_en <= 1'b0;
+              pe_4_en <= 1'b0;  
+              f_bram_en <= 1'b1;
+              w1_bram_en <= 1'b1;
+              w2_bram_en <= 1'b1;
+              w3_bram_en <= 1'b1;
+              w4_bram_en <= 1'b1;   
+            end
+          end    
         end
-        STATE_PSUM: begin
-          f_bram_en <= 1'b1;
-          w1_bram_en <= 1'b1;
-          w2_bram_en <= 1'b1;
-          w3_bram_en <= 1'b1;
-          w4_bram_en <= 1'b1;
-          pe_1_en <= 1'b0;
-          pe_2_en <= 1'b0;
-          pe_3_en <= 1'b0;
-          pe_4_en <= 1'b0; 
+        STATE_PSUM: begin                    
           if (delay[1]) begin            
             if (feat_size[10] && f_addr[8]) state <= STATE_READ_BIAS;
             else if (feat_size[8] && f_addr[6]) state <= STATE_READ_BIAS;
             else if (feat_size[6] && f_addr[4]) state <= STATE_READ_BIAS;
-            else state <= STATE_COMPUTE;
+            else begin
+              state <= STATE_COMPUTE;
+              f_bram_en <= 1'b0;
+              w1_bram_en <= 1'b0;
+              w2_bram_en <= 1'b0;
+              w3_bram_en <= 1'b0;
+              w4_bram_en <= 1'b0;
+              pe_1_en <= 1'b1;
+              pe_2_en <= 1'b1;
+              pe_3_en <= 1'b1;
+              pe_4_en <= 1'b1; 
+            end
           end
         end
         STATE_WRITE_RESULT: begin
-          state <= STATE_SEND_RESULT;
+          state <= STATE_SEND_RESULT;  
         end
         STATE_ADD_BIAS: begin
           f_bram_en <= 1'b0;
           if (pe_delay[3]) state <= STATE_WRITE_RESULT;
         end
-        STATE_SEND_RESULT: begin
-          if (delay == 2'b11) begin
-            m_axis_tvalid <= 1'b1;
+        STATE_SEND_RESULT: begin        
+          if (bias_size[3:0] == 4'd10) begin
+            if (delay[1] && delay[0] ) begin
+              m_axis_tvalid <= 1'b1;   
+              if (b_addr[8:0]==bias_size>>2) begin
+                m_axis_tlast <= 1'b1;
+                fc_done <= 1'b1;            
+                state <= STATE_IDLE;
+              end
+            end            
+          end
+          else if (delay[0]) begin
+            m_axis_tvalid <= 1'b1;           
             if (b_addr[8:0]==bias_size>>2) begin
               m_axis_tlast <= 1'b1;
               fc_done <= 1'b1;            
               state <= STATE_IDLE;
+              delay <= 2'b00;
             end
             else if (w4_addr[10]) begin
               state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
+              delay <= 2'b00;
             end
-            else state <= STATE_COMPUTE;
+          end
+          else if (delay[1]) begin
+            delay <= 2'b00;
+            state <= STATE_PSUM;  
+            m_axis_tvalid <= 1'b0;
+            pe_1_en <= 1'b0;
+            pe_2_en <= 1'b0;
+            pe_3_en <= 1'b0;
+            pe_4_en <= 1'b0;  
+            f_bram_en <= 1'b1;
+            w1_bram_en <= 1'b1;
+            w2_bram_en <= 1'b1;
+            w3_bram_en <= 1'b1;
+            w4_bram_en <= 1'b1;
           end
         end
       endcase
@@ -962,85 +1053,68 @@ module fc_module
           end
         end
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
-          if (!S_AXIS_TLAST) begin
-            receive_cnt <= next_cnt[10:0];
-            case (weight_n)
-              2'b00: w1_addr <= next_w1addr[10:0];
-              2'b01: w2_addr <= next_w2addr[10:0];
-              2'b10: w3_addr <= next_w3addr[10:0];
-              2'b11: w4_addr <= next_w4addr[10:0];
-              default: ;
-            endcase
-          end
-          if (next_cnt[10:0] == feat_size>>2) begin
-            receive_cnt <= 10'b0;
-            if (column_cnt == bias_size - 1) begin
-              column_cnt <= 10'b0;
-              w_receive_done <= 1'b1;
-              w1_addr <= 10'h000;
-              w2_addr <= 10'h000;
-              w3_addr <= 10'h000;
-              w4_addr <= 10'h000;
-            end
-            else begin
-              column_cnt <= column_cnt + 1;
+          if (S_AXIS_TVALID) begin
+            if (!S_AXIS_TLAST) begin
+              receive_cnt <= next_cnt[10:0];
               case (weight_n)
-                2'b00: weight_n <= 2'b01;
-                2'b01: weight_n <= 2'b10;
-                2'b10: weight_n <= 2'b11;
-                2'b11: begin
-                  weight_n <= 2'b00;
-                  if (next_w4addr[10]) begin
-                    w1_addr <= 10'h000;
-                    w2_addr <= 10'h000;
-                    w3_addr <= 10'h000;
-                    w4_addr <= 10'h000;
-                  end
-                end
+                2'b00: w1_addr <= next_w1addr[10:0];
+                2'b01: w2_addr <= next_w2addr[10:0];
+                2'b10: w3_addr <= next_w3addr[10:0];
+                2'b11: w4_addr <= next_w4addr[10:0];
                 default: ;
               endcase
-            end 
-          end
+            end
+            if (next_cnt[10:0] == feat_size>>2) begin
+              receive_cnt <= 10'b0;
+              if (column_cnt == bias_size - 1) begin
+                column_cnt <= 10'b0;
+                w_receive_done <= 1'b1;
+                w1_addr <= 10'h000;
+                w2_addr <= 10'h000;
+                w3_addr <= 10'h000;
+                w4_addr <= 10'h000;
+              end
+              else begin
+                column_cnt <= column_cnt + 1;
+                case (weight_n)
+                  2'b00: weight_n <= 2'b01;
+                  2'b01: weight_n <= 2'b10;
+                  2'b10: weight_n <= 2'b11;
+                  2'b11: begin
+                    weight_n <= 2'b00;
+                    if (next_w4addr[10]) begin
+                      w1_addr <= 10'h000;
+                      w2_addr <= 10'h000;
+                      w3_addr <= 10'h000;
+                      w4_addr <= 10'h000;
+                    end
+                  end
+                  default: ;
+                endcase
+              end 
+            end
+          end          
         end
         STATE_READ_BIAS: begin 
-          if (delay == 2'b00) begin
-            
+          if (delay == 2'b00) begin            
             delay <= delay +1;
           end
           else if (!delay[1]) delay <= delay +1;
           else begin
-            bias <= {f_dout[7:0], f_dout[15:8], f_dout[23:16], f_dout[31:24]};
+            bias <= f_dout;
             b_addr <= next_baddr[10:0];
           end          
         end
         STATE_COMPUTE: begin          
           cnt_4 <= cnt_4 + 1;
-          if (cnt_4[2]) begin  //cnt_4 =4
+          if (cnt_4[1] && cnt_4[0]) begin
             weight1 <= weight1 << 8;
             weight2 <= weight2 << 8;
             weight3 <= weight3 << 8;
-            weight4 <= weight4 << 8;       
-            feat <= feat << 8;         
-            if ((f_addr[8] && feat_size[10]) ||(f_addr[6] && feat_size[8]) ||(f_addr[4] && feat_size[6])) begin //column 다 읽었을 때
-              if (delay[1] && delay[0]) begin
-                delay <= 2'b00;                  
-                cnt_4 <= 3'b000;
-                pe_1_en <= 1'b0;
-                pe_2_en <= 1'b0;
-                pe_3_en <= 1'b0;
-                pe_4_en <= 1'b0;
-              end
-              else begin
-                delay <= delay +1;       
-              end
-            end
-            else begin
-              cnt_4 <= 3'b000;
-              pe_1_en <= 1'b0;
-              pe_2_en <= 1'b0;
-              pe_3_en <= 1'b0;
-              pe_4_en <= 1'b0; 
-            end
+            weight4 <= weight4 << 8;
+            feat <= feat << 8;
+            if ((feat_size[10] && f_addr[8]) ||(feat_size[8] && f_addr[6]) ||(feat_size[6] && f_addr[4])) delay <= delay + 1;
+            else cnt_4 <= 3'b000;
           end
           else if (cnt_4[1] || cnt_4[0]) begin //cnt_4 =3 or 2 or 1
             weight1 <= weight1 << 8;
@@ -1054,6 +1128,7 @@ module fc_module
             first4 <= 1'b0;
           end          
           else begin //cnt_4 =0
+            cnt_4 <= cnt_4 + 1;
             if (~|f_addr) begin
               f_addr <= next_faddr[10:0];
               w1_addr <= next_w1addr[10:0];
@@ -1065,10 +1140,11 @@ module fc_module
               first3 <= 1'b1;
               first4 <= 1'b1;
             end
-            pe_1_en <= 1'b1;
-            pe_2_en <= 1'b1;
-            pe_3_en <= 1'b1;
-            pe_4_en <= 1'b1;            
+            feat <= feat << 8;
+            weight1 <= weight1 << 8;
+            weight2 <= weight2 << 8;
+            weight3 <= weight3 << 8;
+            weight4 <= weight4 << 8;              
           end
         end
         STATE_PSUM: begin          
@@ -1076,14 +1152,7 @@ module fc_module
             delay <= delay +1;            
           end
           else begin
-            delay <= 2'b00;  
-            if (|f_addr) begin
-              f_addr <= next_faddr[10:0];
-              w1_addr <= next_w1addr[10:0];
-              w2_addr <= next_w2addr[10:0];
-              w3_addr <= next_w3addr[10:0];
-              w4_addr <= next_w4addr[10:0];
-            end            
+            delay <= 2'b00;                   
             weight1[63:32] <= {w1_dout[7:0],w1_dout[15:8], w1_dout[23:16], w1_dout[31:24]};
             weight2[55:24] <= {w2_dout[7:0],w2_dout[15:8], w2_dout[23:16], w2_dout[31:24]};
             weight3[47:16] <= {w3_dout[7:0],w3_dout[15:8], w3_dout[23:16], w3_dout[31:24]};
@@ -1092,6 +1161,13 @@ module fc_module
             if ((f_addr[8] && feat_size[10]) ||(f_addr[6] && feat_size[8]) ||(f_addr[4] && feat_size[6])) begin
               f_addr <= 10'h000;
             end
+            else if (|f_addr) begin
+              f_addr <= next_faddr[10:0];
+              w1_addr <= next_w1addr[10:0];
+              w2_addr <= next_w2addr[10:0];
+              w3_addr <= next_w3addr[10:0];
+              w4_addr <= next_w4addr[10:0];
+            end       
           end
         end
 
@@ -1136,9 +1212,9 @@ module fc_module
           delay <= 2'b00;
         end
         STATE_SEND_RESULT: begin
-          m_axis_tdata <= tdata;
+          //m_axis_tdata <= tdata;
           delay <= delay + 1;
-          if (bias_size == 11'd10) begin
+          if (bias_size[3:0] == 4'd10) begin
             case (delay)
               2'b00: begin
                 if (!max_comp1) begin
@@ -1167,6 +1243,7 @@ module fc_module
               default: ;
             endcase
           end
+          else m_axis_tdata <= tdata;
         end
       endcase
     end
