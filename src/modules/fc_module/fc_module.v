@@ -496,7 +496,7 @@ module fc_module
   reg w1_we, w2_we, w3_we, w4_we, f_we;
   reg [1:0] weight_n;
   reg [10:0] receive_cnt, column_cnt;
-  wire [31:0] w_dout, f_dout;
+  wire [31:0] f_dout;
   // reg [31:0] din;
   wire [31:0] din;
 
@@ -513,7 +513,7 @@ module fc_module
   reg pe_1_en, pe_2_en, pe_3_en, pe_4_en;
   reg [31:0] feat , bias;
   reg [63:0] weight1, weight2, weight3, weight4;
-  reg [7:0] p1_a;
+  wire [7:0] p1_a;
   wire [7:0] p1_b, p2_b, p3_b, p4_b;
   reg f_receive_done, b_receive_done, w_receive_done;
   reg [3:0] pe_delay;
@@ -876,21 +876,25 @@ module fc_module
    .C_out()
  );
   
-  assign p1_b = weight1[63:32];
-  assign p2_b = weight2[63:32];
-  assign p3_b = weight3[63:32];
-  assign p4_b = weight4[63:32];
+  assign p1_a = feat[31:24];
+  assign p1_b = weight1[63:56];
+  assign p2_b = weight2[63:56];
+  assign p3_b = weight3[63:56];
+  assign p4_b = weight4[63:56];
   
   // data path
   always @(posedge clk) begin
     if (!rstn) begin
       f_addr <=  10'h000;
       b_addr <= 10'h200;
-      w1_addr <= 10'h000;
-      w2_addr <= 10'h000;
-      w3_addr <= 10'h000;
-      w4_addr <= 10'h000;
+      w1_addr <= 11'h000;
+      w2_addr <= 11'h000;
+      w3_addr <= 11'h000;
+      w4_addr <= 11'h000;
       first1 <= 1'b0;
+      first2 <= 1'b0;
+      first3 <= 1'b0;
+      first4 <= 1'b0;
       cnt_4 <= 3'b000;   
       receive_cnt <= 10'h000;
       f_receive_done <= 1'b0;
@@ -1004,24 +1008,24 @@ module fc_module
             weight1 <= weight1 << 8;
             weight2 <= weight2 << 8;
             weight3 <= weight3 << 8;
-            weight4 <= weight4 << 8;                
+            weight4 <= weight4 << 8;       
+            feat <= feat << 8;         
             if ((f_addr[10] && feat_size[10]) ||(f_addr[8] && feat_size[8]) ||(f_addr[6] && feat_size[6])) begin //column 다 읽었을 때
-              f_addr <= 10'h000;
-              weight1 <= weight1 << 8;
-              weight2 <= weight2 << 8;
-              weight3 <= weight3 << 8;
-              weight4 <= weight4 << 8;
               if (delay[1] && delay[0]) begin
+                delay <= 2'b00;  
+                f_addr <= 10'h000;
+                cnt_4 <= 3'b000;
                 pe_1_en <= 1'b0;
                 pe_2_en <= 1'b0;
                 pe_3_en <= 1'b0;
                 pe_4_en <= 1'b0;
               end
               else begin
-                delay <= delay +1;                
+                delay <= delay +1;       
               end
             end
             else begin
+              cnt_4 <= 3'b000;
               pe_1_en <= 1'b0;
               pe_2_en <= 1'b0;
               pe_3_en <= 1'b0;
@@ -1033,8 +1037,12 @@ module fc_module
             weight2 <= weight2 << 8;
             weight3 <= weight3 << 8;
             weight4 <= weight4 << 8;
-          end
-          
+            feat <= feat << 8;
+            first1 <= 1'b0;
+            first2 <= 1'b0;
+            first3 <= 1'b0;
+            first4 <= 1'b0;
+          end          
           else begin //cnt_4 =0
             if (~|f_addr) begin
               first1 <= 1'b1;
@@ -1049,12 +1057,16 @@ module fc_module
           end
         end
         STATE_PSUM: begin          
-          if (delay == 2'b00) begin
-            delay <= delay +1;
-            f_addr <= next_faddr;
+          if (!delay[1]) begin
+            delay <= delay +1;            
           end
           else begin
             delay <= 2'b00;
+            f_addr <= next_faddr;
+            w1_addr <= next_w1addr;
+            w2_addr <= next_w2addr;
+            w3_addr <= next_w3addr;
+            w4_addr <= next_w4addr;
             weight1[63:32] <= {w1_dout[7:0],w1_dout[15:8], w1_dout[23:16], w1_dout[31:24]};
             weight2[55:24] <= {w2_dout[7:0],w2_dout[15:8], w2_dout[23:16], w2_dout[31:24]};
             weight3[47:16] <= {w3_dout[7:0],w3_dout[15:8], w3_dout[23:16], w3_dout[31:24]};
