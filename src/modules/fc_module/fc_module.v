@@ -413,7 +413,7 @@ module pe (
   assign result_temp = (f8_reg) ? 28'h0000000: result;
 
   CLA_28Bit u_cla_28bit (
-    .A({12'h000,sum}),
+    .A({{12{sum[15]}},sum}),
     .B(result_temp),
     .C_in(1'b0),
     .C_out(),
@@ -819,7 +819,6 @@ module fc_module
           end
         end
         STATE_READ_BIAS: begin
-          f_bram_en <= 1'b1;
           if (delay[1]) begin
             state <= STATE_ADD_BIAS;
           end
@@ -1005,12 +1004,13 @@ module fc_module
         end
         STATE_READ_BIAS: begin 
           if (delay == 2'b00) begin
-            b_addr <= next_baddr[10:0];
+            
             delay <= delay +1;
           end
           else if (!delay[1]) delay <= delay +1;
           else begin
-            bias <= f_dout;
+            bias <= {f_dout[7:0], f_dout[15:8], f_dout[23:16], f_dout[31:24]};
+            b_addr <= next_baddr[10:0];
           end          
         end
         STATE_COMPUTE: begin          
@@ -1100,22 +1100,21 @@ module fc_module
           if (pe_delay[2]) begin
             if (!pe_delay[0] &&!pe_delay[1]) begin
               pe_result <= pe_result1_temp;
-              bias_temp <= bias[7:0];              
+              bias_temp <= {{15{bias[7]}},bias[6:0], {6{1'b0}}};              
             end
             else if (pe_delay[0] && !pe_delay[1]) begin
               pe_result <= pe_result2_temp;
-              bias_temp <= bias[15:8];
+              bias_temp <= {{15{bias[15]}},bias[14:8], {6{1'b0}}};
               bias_add_result1 <= bias_add_result;
             end
             else if (!pe_delay[0] && pe_delay[1]) begin
               pe_result <= pe_result3_temp;
-              bias_temp <= bias[23:16];
+              bias_temp <= {{15{bias[23]}},bias[22:16], {6{1'b0}}};
               bias_add_result2 <= bias_add_result;
             end
             else if (pe_delay[0] &&pe_delay[1]) begin
               pe_result <= pe_result4_temp;
-              bias_temp <= bias[31:24];
-              state <= STATE_SEND_RESULT;
+              bias_temp <= {{15{bias[31]}},bias[30:24], {6{1'b0}}};              
               bias_add_result3 <= bias_add_result;
             end
           end
