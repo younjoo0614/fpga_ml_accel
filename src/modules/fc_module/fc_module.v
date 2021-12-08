@@ -492,7 +492,7 @@ module fc_module
   // TODO : Write your code here
   ////////////////////////////////////////////////////////////////////////////
   reg [10:0] f_addr, w1_addr, w2_addr, w3_addr, w4_addr, b_addr;
-  reg [9:0] fb_addr;
+  wire [9:0] fb_addr;
   reg w1_we, w2_we, w3_we, w4_we, f_we;
   reg [1:0] weight_n;
   reg [10:0] receive_cnt, column_cnt;
@@ -500,6 +500,7 @@ module fc_module
   // reg [31:0] din;
   wire [31:0] din;
 
+  assign fb_addr = (state == STATE_RECEIVE_BIAS || state == STATE_READ_BIAS) ? b_addr[9:0] : f_addr[9:0];
   assign din = S_AXIS_TDATA;
 
   reg [31:0] tdata;
@@ -519,7 +520,7 @@ module fc_module
   wire [31:0] w1_dout, w2_dout, w3_dout, w4_dout;
   reg [3:0] max_idx;
   reg [7:0] max_value;
-  reg max_comp1, max_comp2, max_comp3, max_comp4;
+  wire max_comp1, max_comp2, max_comp3, max_comp4;
 
   assign F_writedone = f_receive_done;
   assign B_writedone = b_receive_done;
@@ -728,11 +729,13 @@ module fc_module
               state <= STATE_RECEIVE_FEATURE;
               f_bram_en <= 1'b1;
               f_we <= 1'b1;
+              s_axis_tready <= 1'b1;
             end
             else if (command[1] && !b_receive_done) begin
               state <= STATE_RECEIVE_BIAS;
               f_bram_en <= 1'b1;
               f_we <= 1'b1;
+              s_axis_tready <= 1'b1;
             end
             else if (command[2] && !w_receive_done) begin
               state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
@@ -742,22 +745,20 @@ module fc_module
           end
         end
         STATE_RECEIVE_FEATURE: begin
-          if (receive_cnt == feat_size>>2) begin            
+          if (receive_cnt == feat_size>>2-1) begin            
             state <= STATE_IDLE;
             s_axis_tready <= 1'b0;
             f_bram_en <= 1'b0;
             f_we <= 1'b0;
           end
-          else s_axis_tready <= 1'b1;
         end
         STATE_RECEIVE_BIAS: begin
-          if (receive_cnt == bias_size>>2) begin            
+          if (receive_cnt == bias_size>>2-1) begin            
             state <= STATE_IDLE;
             s_axis_tready <= 1'b0;
             f_bram_en <= 1'b0;
             f_we <= 1'b0;
           end
-          else s_axis_tready <= 1'b1;
         end
 
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
@@ -915,7 +916,6 @@ module fc_module
   // data path
   always @(posedge clk) begin
     if (!rstn) begin
-      fb_addr <= 9'h000;
       f_addr <=  10'h000;
       b_addr <= 10'h200;
       w1_addr <= 10'h000;
@@ -962,9 +962,8 @@ module fc_module
           if (!S_AXIS_TLAST) begin
             f_addr <= next_faddr;
             receive_cnt <= receive_cnt + 1;
-            fb_addr <= f_addr;
           end
-          if (receive_cnt == feat_size>>2) begin 
+          if (receive_cnt == feat_size>>2-1) begin 
             f_addr <= 10'h000;
             receive_cnt <= 10'h000;           
             f_receive_done <= 1'b1;
@@ -974,9 +973,8 @@ module fc_module
           if (!S_AXIS_TLAST) begin
             b_addr <= next_baddr;
             receive_cnt <= receive_cnt + 1;
-            fb_addr <= b_addr;
           end          
-          if (receive_cnt == bias_size>>2) begin
+          if (receive_cnt == bias_size>>2-1) begin
             b_addr <= 10'h200;
             receive_cnt <= 10'h000; 
             b_receive_done <= 1'b1;
@@ -1070,7 +1068,6 @@ module fc_module
         STATE_READ_BIAS: begin 
           if (delay == 2'b00) begin
             b_addr <= next_baddr;
-            fb_addr <= b_addr;
             delay <= delay +1;
           end
           else if (!delay[1]) delay <= delay +1;
@@ -1131,7 +1128,7 @@ module fc_module
         STATE_PSUM: begin          
           if (delay == 2'b00) begin
             delay <= delay +1;
-            fb_addr <= f_addr;
+            f_addr <= next_faddr;
           end
           else begin
             delay <= 2'b00;
