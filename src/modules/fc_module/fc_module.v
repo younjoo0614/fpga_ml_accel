@@ -1083,22 +1083,21 @@ module fc_module
             weight3 <= weight3 << 8;
             weight4 <= weight4 << 8;                
             if ((f_addr[10] && feat_size[10]) ||(f_addr[8] && feat_size[8]) ||(f_addr[6] && feat_size[6])) begin //column 다 읽었을 때
-              f_addr <= 10'h000;
-              weight1 <= weight1 << 8;
-              weight2 <= weight2 << 8;
-              weight3 <= weight3 << 8;
-              weight4 <= weight4 << 8;
               if (delay[1] && delay[0]) begin
+                delay <= 2'b00;  
+                f_addr <= 10'h000;
+                cnt_4 <= 3'b000;
                 pe_1_en <= 1'b0;
                 pe_2_en <= 1'b0;
                 pe_3_en <= 1'b0;
                 pe_4_en <= 1'b0;
               end
               else begin
-                delay <= delay +1;                
+                delay <= delay +1;       
               end
             end
             else begin
+              cnt_4 <= 3'b000;
               pe_1_en <= 1'b0;
               pe_2_en <= 1'b0;
               pe_3_en <= 1'b0;
