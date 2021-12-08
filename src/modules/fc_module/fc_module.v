@@ -910,6 +910,7 @@ module fc_module
       max_idx <= 4'd10;
       max_value <= 8'h80;
       pe_delay <= 4'h0;
+      feat <= 32'h00000000;
       weight1 <= 64'h0000_0000_0000_0000;
       weight2 <= 64'h0000_0000_0000_0000;
       weight3 <= 64'h0000_0000_0000_0000;
@@ -1116,13 +1117,13 @@ module fc_module
         STATE_WRITE_RESULT: begin
           tdata[7:0] <= bias_add_result1[27] ? (8'b0000_0000) : 
                           ((bias_add_result1[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result1[12:6]} : 8'b0111_1111); 
-          tdata[14:8] <= bias_add_result2[27] ? (8'b0000_0000) : 
+          tdata[15:8] <= bias_add_result2[27] ? (8'b0000_0000) : 
                           ((bias_add_result2[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result2[12:6]} : 8'b0111_1111);
-          tdata[22:16] <= bias_add_result3[27] ? (8'b0000_0000) : 
+          tdata[23:16] <= bias_add_result3[27] ? (8'b0000_0000) : 
                           ((bias_add_result3[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result3[12:6]} : 8'b0111_1111);
-          tdata[30:24] <= bias_add_result4[27] ? (8'b0000_0000) : 
+          tdata[31:24] <= bias_add_result4[27] ? (8'b0000_0000) : 
                           ((bias_add_result4[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);
-          delay <= 1'b0;
+          delay <= 2'b0;
         end
         STATE_SEND_RESULT: begin
           m_axis_tdata <= tdata;
