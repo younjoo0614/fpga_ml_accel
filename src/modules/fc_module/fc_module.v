@@ -1119,7 +1119,7 @@ module fc_module
         STATE_PSUM: begin          
           if (delay == 2'b00) begin
             delay <= delay +1;
-            fb_addr <= f_addr;
+            f_addr <= next_faddr;
           end
           else begin
             delay <= 2'b00;
