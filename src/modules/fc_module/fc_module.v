@@ -832,9 +832,9 @@ module fc_module
           w3_bram_en <= 1'b1;
           w4_bram_en <= 1'b1;
           if (delay[1]) begin            
-            if (feat_size[10] && f_addr[10]) state <= STATE_READ_BIAS;
-            else if (feat_size[8] && f_addr[8]) state <= STATE_READ_BIAS;
-            else if (feat_size[6] && f_addr[6]) state <= STATE_READ_BIAS;
+            if (feat_size[10] && f_addr[8]) state <= STATE_READ_BIAS;
+            else if (feat_size[8] && f_addr[6]) state <= STATE_READ_BIAS;
+            else if (feat_size[6] && f_addr[4]) state <= STATE_READ_BIAS;
             else state <= STATE_COMPUTE;
           end
         end
@@ -1009,7 +1009,7 @@ module fc_module
             weight3 <= weight3 << 8;
             weight4 <= weight4 << 8;       
             feat <= feat << 8;         
-            if ((f_addr[10] && feat_size[10]) ||(f_addr[8] && feat_size[8]) ||(f_addr[6] && feat_size[6])) begin //column 다 읽었을 때
+            if ((f_addr[8] && feat_size[10]) ||(f_addr[6] && feat_size[8]) ||(f_addr[4] && feat_size[6])) begin //column 다 읽었을 때
               if (delay[1] && delay[0]) begin
                 delay <= 2'b00;  
                 f_addr <= 10'h000;
