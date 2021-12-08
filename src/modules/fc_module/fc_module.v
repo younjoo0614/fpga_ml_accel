@@ -865,7 +865,6 @@ module fc_module
  
  reg [27:0] bias_temp, pe_result;
  wire [27:0] bias_add_result;
- reg [2:0] bias_add_delay;
 
  CLA_28Bit u_bias_add(
    .A(pe_result),
@@ -1011,8 +1010,7 @@ module fc_module
             feat <= feat << 8;         
             if ((f_addr[8] && feat_size[10]) ||(f_addr[6] && feat_size[8]) ||(f_addr[4] && feat_size[6])) begin //column 다 읽었을 때
               if (delay[1] && delay[0]) begin
-                delay <= 2'b00;  
-                f_addr <= 10'h000;
+                delay <= 2'b00;                  
                 cnt_4 <= 3'b000;
                 pe_1_en <= 1'b0;
                 pe_2_en <= 1'b0;
@@ -1071,6 +1069,9 @@ module fc_module
             weight3[47:16] <= {w3_dout[7:0],w3_dout[15:8], w3_dout[23:16], w3_dout[31:24]};
             weight4[39:8] <= {w4_dout[7:0],w4_dout[15:8], w4_dout[23:16], w4_dout[31:24]};            
             feat <= {f_dout[7:0], f_dout[15:8], f_dout[23:16], f_dout[31:24]};
+            if ((f_addr[8] && feat_size[10]) ||(f_addr[6] && feat_size[8]) ||(f_addr[4] && feat_size[6])) begin
+              f_addr <= 10'h000;
+            end
           end
         end
 
