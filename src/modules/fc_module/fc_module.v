@@ -199,7 +199,6 @@ module pe (
   
   // Internal Registers
   reg    [15:0]  sum;
-  reg    [7:0]   A_reg;
   reg    [7:0]   out_a_reg, out_b_reg;
   reg            f1_reg, f2_reg, f3_reg, f4_reg, f5_reg, f6_reg, f7_reg, f8_reg;
   reg    [7:0]   p1_reg, p2_reg, p3_reg, p4_reg, p5_reg, p6_reg, p7_reg, p8_reg;
@@ -1176,7 +1175,10 @@ module fc_module
               bias_add_result3 <= bias_add_result;
             end
           end
-          else if (pe_delay[3]) bias_add_result4 <= bias_add_result;
+          else if (pe_delay[3]) begin
+            bias_add_result4 <= bias_add_result;
+            pe_delay <= 4'h0;
+          end
         end
 
         STATE_WRITE_RESULT: begin
@@ -1213,6 +1215,7 @@ module fc_module
               end              
             end
             else if (delay == 2'b11) begin
+              delay <= 2'b00;
               if (!max_comp4) begin
                 max_idx <= 4*(b_addr[1:0]-1)+3;
                 max_value <= tdata[31:24];
