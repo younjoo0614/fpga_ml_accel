@@ -956,7 +956,7 @@ module fc_module
             b_addr <= next_baddr[10:0];
             receive_cnt <= next_cnt[10:0];
           end          
-          if (next_cnt[10:0] == bias_size>>2 ) begin
+          if (next_cnt[10:0] == bias_size>>2) begin
             b_addr <= 10'h200;
             receive_cnt <= 10'h000; 
             b_receive_done <= 1'b1;
@@ -1127,44 +1127,46 @@ module fc_module
 
         STATE_WRITE_RESULT: begin
           tdata[7:0] <= bias_add_result1[27] ? (8'b0000_0000) : 
-                          ((bias_add_result1[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result1[12:6]} : 8'b0111_1111); 
+                          ((bias_add_result1[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result1[12:6]} : 8'b0111_1111); 
           tdata[15:8] <= bias_add_result2[27] ? (8'b0000_0000) : 
-                          ((bias_add_result2[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result2[12:6]} : 8'b0111_1111);
+                          ((bias_add_result2[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result2[12:6]} : 8'b0111_1111);
           tdata[23:16] <= bias_add_result3[27] ? (8'b0000_0000) : 
-                          ((bias_add_result3[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result3[12:6]} : 8'b0111_1111);
+                          ((bias_add_result3[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result3[12:6]} : 8'b0111_1111);
           tdata[31:24] <= bias_add_result4[27] ? (8'b0000_0000) : 
-                          ((bias_add_result4[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);
-          delay <= 2'b0;
+                          ((bias_add_result4[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);
+          delay <= 2'b00;
         end
         STATE_SEND_RESULT: begin
           m_axis_tdata <= tdata;
           delay <= delay + 1;
           if (bias_size == 11'd10) begin
-            if (delay == 2'b00) begin
-              if (!max_comp1) begin
-                max_idx <= 4*(b_addr[1:0]-1);
-                max_value <= tdata[7:0];
+            case (delay)
+              2'b00: begin
+                if (!max_comp1) begin
+                  max_idx <= 4*(b_addr[1:0]-1);
+                  max_value <= tdata[7:0];
+                end
               end
-            end
-            else if (delay == 2'b01) begin
-              if (!max_comp2) begin
-                max_idx <= 4*(b_addr[1:0]-1)+1;
-                max_value <= tdata[15:8];
-              end              
-            end
-            else if (delay == 2'b10) begin
-              if (!max_comp3) begin
-                max_idx <= 4*(b_addr[1:0]-1)+2;
-                max_value <= tdata[23:16];
-              end              
-            end
-            else if (delay == 2'b11) begin
-              delay <= 2'b00;
-              if (!max_comp4) begin
-                max_idx <= 4*(b_addr[1:0]-1)+3;
-                max_value <= tdata[31:24];
-              end            
-            end
+              2'b01: begin
+                if (!max_comp2) begin
+                  max_idx <= 4*(b_addr[1:0]-1)+1;
+                  max_value <= tdata[15:8];
+                end
+              end
+              2'b10: begin
+                if (!max_comp3) begin
+                  max_idx <= 4*(b_addr[1:0]-1)+2;
+                  max_value <= tdata[23:16];
+                end
+              end
+              2'b11: begin
+                if (!max_comp4) begin
+                  max_idx <= 4*(b_addr[1:0]-1)+3;
+                  max_value <= tdata[31:24];
+                end
+              end
+              default: ;
+            endcase
           end
         end
       endcase
