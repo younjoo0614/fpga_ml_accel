@@ -1097,6 +1097,7 @@ module fc_module
               end
             end
             else begin
+              cnt_4 <= 3'b000;
               pe_1_en <= 1'b0;
               pe_2_en <= 1'b0;
               pe_3_en <= 1'b0;
