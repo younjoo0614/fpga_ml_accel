@@ -1082,28 +1082,37 @@ module fc_module
           cnt_4 <= cnt_4 + 1;
           if (cnt_4[2]) begin  //cnt_4 =4
             weight1 <= weight1 << 8;
-            weight1 <= weight1 << 8;
-            weight1 <= weight1 << 8;
-            weight1 <= weight1 << 8;
-            pe_1_en <= 1'b0;
-            pe_2_en <= 1'b0;
-            pe_3_en <= 1'b0;
-            pe_4_en <= 1'b0;     
-            if (f_addr[10] && feat_size[10]) begin //column 다 읽었을 때
+            weight2 <= weight2 << 8;
+            weight3 <= weight3 << 8;
+            weight4 <= weight4 << 8;                
+            if ((f_addr[10] && feat_size[10]) ||(f_addr[8] && feat_size[8]) ||(f_addr[6] && feat_size[6])) begin //column 다 읽었을 때
               f_addr <= 10'h000;
+              weight1 <= weight1 << 8;
+              weight2 <= weight2 << 8;
+              weight3 <= weight3 << 8;
+              weight4 <= weight4 << 8;
+              if (delay[1] && delay[0]) begin
+                pe_1_en <= 1'b0;
+                pe_2_en <= 1'b0;
+                pe_3_en <= 1'b0;
+                pe_4_en <= 1'b0;
+              end
+              else begin
+                delay <= delay +1;                
+              end
             end
-            else if (f_addr[10] && feat_size[10]) begin
-              f_addr <= 10'h000;
-            end
-            else if (f_addr[10] && feat_size[10]) begin
-              f_addr <= 10'h000;
+            else begin
+              pe_1_en <= 1'b0;
+              pe_2_en <= 1'b0;
+              pe_3_en <= 1'b0;
+              pe_4_en <= 1'b0; 
             end
           end
           else if (cnt_4[1] || cnt_4[0]) begin //cnt_4 =3 or 2 or 1
             weight1 <= weight1 << 8;
-            weight1 <= weight1 << 8;
-            weight1 <= weight1 << 8;
-            weight1 <= weight1 << 8;
+            weight2 <= weight2 << 8;
+            weight3 <= weight3 << 8;
+            weight4 <= weight4 << 8;
           end
           
           else begin //cnt_4 =0
