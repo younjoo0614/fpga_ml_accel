@@ -55,6 +55,28 @@ module CLA_16Bit (
   CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(C_out_LCU[3]), .p_g(P[3]), .g_g(G[3]), .of());
 endmodule
 
+module COMP_8Bit(
+  input [7:0] A,
+  input [7:0] B,
+
+  output comp
+ );
+  wire [1:0] C_out_LCU;
+  wire [1:0] P;
+  wire [1:0] G;
+
+  wire [7:0] A_1;
+
+  reg [7:0] S;
+  assign comp = S[7];
+
+  assign A_1 = ~A;
+
+  CLG2 clg2(.C_in(1'b1), .p(P), .g(G), .C_out(C_out_LCU));
+  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(1'b1), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
+endmodule
+
 module CLG4
 (
   input C_in,
@@ -88,6 +110,18 @@ assign C_out[1] = g[1] | (p[1] & C_out[0]);
 assign C_out[2] = g[2] | (p[2] & C_out[1]);
 //--------------------------------------------------------------
 
+endmodule
+
+module CLG2
+(
+  input C_in,
+  input [1:0] p,
+  input [1:0] g,
+
+  output [1:0] C_out
+);
+  assign C_out[0] = g[0] | (p[0] & C_in);
+  assign C_out[1] = g[1] | (p[1] & C_out[0]);
 endmodule
 
 
@@ -423,7 +457,8 @@ module fc_module
     input wire [20:0] size,
     // output wire [31:0] FEAT_SIZE, BIAS_SIZE, WEIGHT_SIZE,
 
-    output wire F_writedone, B_writedone, W_writedone, FC_DONE
+    output wire F_writedone, B_writedone, W_writedone, FC_DONE,
+    output wire [3:0] MAX_idx
   ); 
 
   localparam STATE_IDLE = 4'd0,
@@ -460,7 +495,7 @@ module fc_module
   reg [9:0] fb_addr;
   reg w1_we, w2_we, w3_we, w4_we, f_we;
   reg [1:0] weight_n;
-  reg [7:0] weight_cnt;
+  reg [10:0] receive_cnt, column_cnt;
   wire [31:0] w_dout, f_dout;
   // reg [31:0] din;
   wire [31:0] din;
@@ -475,15 +510,19 @@ module fc_module
   reg f_bram_en, w1_bram_en, w2_bram_en, w3_bram_en, w4_bram_en;
   reg first1, first2, first3, first4;
   reg pe_1_en, pe_2_en, pe_3_en, pe_4_en;
-  reg [31:0] weight1, weight2, weight3, weight4, pre_weight2, pre_weight3, pre_weight4, feat , bias;
+  reg [31:0] weight1, weight2, weight3, weight4, post_weight2, post_weight3, post_weight4, feat , bias;
   reg [7:0] p1_a, p1_b, p2_b, p3_b, p4_b;
   reg f_receive_done, b_receive_done, w_receive_done;
   reg [3:0] pe_delay;
   wire [31:0] w1_dout, w2_dout, w3_dout, w4_dout;
+  reg [3:0] max_idx;
+  reg [7:0] max_value;
+  reg max_comp1, max_comp2, max_comp3, max_comp4;
 
   assign F_writedone = f_receive_done;
   assign B_writedone = b_receive_done;
   assign W_writedone = w_receive_done;
+  assign MAX_idx = max_idx;
 
   sram_32x1024 weight1_sram_32x1024(
   .addra(w1_addr[9:0]),
@@ -578,8 +617,7 @@ module fc_module
     .of()
   );
 
-  // reg [31:0] feat_size, bias_size, weight_size;
-  reg [10:0] feat_size;
+  reg [10:0] feat_size, bias_size;
   reg fc_done;
 
   // assign FEAT_SIZE = feat_size;
@@ -593,7 +631,7 @@ module fc_module
   CLA_16Bit faddr_adder (
     .A({6'h00,f_addr[9:0]}),
     .B(16'h0001),
-    .C_in(1'b1),
+    .C_in(1'b0),
     .S(next_faddr),
     .C_out()
   );
@@ -601,28 +639,28 @@ module fc_module
   CLA_16Bit w1addr_adder (
     .A({6'h00,w1_addr[9:0]}),
     .B(16'h0001),
-    .C_in(1'b1),
+    .C_in(1'b0),
     .S(next_w1addr),
     .C_out()
   );
   CLA_16Bit w2addr_adder (
     .A({6'h00, w2_addr[9:0]}),
     .B(16'h0001),
-    .C_in(1'b1),
+    .C_in(1'b0),
     .S(next_w2addr),
     .C_out()
   );
   CLA_16Bit w3addr_adder (
     .A({6'h00,w3_addr[9:0]}),
     .B(16'h0001),
-    .C_in(1'b1),
+    .C_in(1'b0),
     .S(next_w3addr),
     .C_out()
   );
   CLA_16Bit w4addr_adder (
     .A({6'h00,w4_addr[9:0]}),
     .B(16'h0001),
-    .C_in(1'b1),
+    .C_in(1'b0),
     .S(next_w4addr),
     .C_out()
   );
@@ -630,9 +668,37 @@ module fc_module
   CLA_16Bit baddr_adder (
     .A({6'h00,b_addr[9:0]}),
     .B(16'h0001),
-    .C_in(1'b1),
+    .C_in(1'b0),
     .S(next_baddr),
     .C_out()
+  );
+
+  COMP_8Bit tdata_max_comp1 (
+    .A(max_value),
+    .B(tdata[7:0]),
+
+    .comp(max_comp1)
+  );
+
+  COMP_8Bit tdata_max_comp2 (
+    .A(max_value),
+    .B(tdata[15:8]),
+
+    .comp(max_comp2)
+  );
+
+  COMP_8Bit tdata_max_comp3 (
+    .A(max_value),
+    .B(tdata[23:16]),
+
+    .comp(max_comp3)
+  );
+
+  COMP_8Bit tdata_max_comp4 (
+    .A(max_value),
+    .B(tdata[31:24]),
+    
+    .comp(max_comp4)
   );
 
   // control path
@@ -649,96 +715,119 @@ module fc_module
       w2_bram_en <= 1'b0;
       w3_bram_en <= 1'b0;
       w4_bram_en <= 1'b0;
+      s_axis_tready <= 1'b0;
     end
     else begin
       case (state)
         STATE_IDLE: begin
           fc_done <= 1'b0;
           if (fc_start) begin
-            if (command[0]) begin
+            if (command[0] && !f_receive_done) begin
               state <= STATE_RECEIVE_FEATURE;
-              s_axis_tready <= 1'b1;
               f_bram_en <= 1'b1;
               f_we <= 1'b1;
-              feat_size <= size[10:0];
             end
-            else if ( command[1]) begin
+            else if (command[1] && !b_receive_done) begin
               state <= STATE_RECEIVE_BIAS;
-              s_axis_tready <= 1'b1;
-              b_addr <= 11'h200;
               f_bram_en <= 1'b1;
               f_we <= 1'b1;
             end
-            else if ( command[2]) begin
+            else if (command[2] && !w_receive_done) begin
               state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
-              s_axis_tready <= 1'b1;
               w1_bram_en <= 1'b1;
               w1_we <= 1'b1;
-              f_addr <= 11'b0;
-              b_addr <= 11'h200;
             end
-          end          
-          else s_axis_tready <= 1'b0;
+          end
         end
         STATE_RECEIVE_FEATURE: begin
-          if (S_AXIS_TLAST) begin            
+          if (receive_cnt == feat_size>>2) begin            
             state <= STATE_IDLE;
             s_axis_tready <= 1'b0;
             f_bram_en <= 1'b0;
             f_we <= 1'b0;
           end
+          else s_axis_tready <= 1'b1;
         end
         STATE_RECEIVE_BIAS: begin
-          if (S_AXIS_TLAST) begin            
+          if (receive_cnt == bias_size>>2) begin            
             state <= STATE_IDLE;
             s_axis_tready <= 1'b0;
             f_bram_en <= 1'b0;
             f_we <= 1'b0;
           end
+          else s_axis_tready <= 1'b1;
         end
 
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
           if (weight_n == 2'b00) begin
             if (w1_bram_en && w1_we) begin
-              if (weight_cnt >= feat_size>>2 - 1) begin
+              if (receive_cnt == feat_size>>2) begin
                 w1_bram_en <= 1'b0;
                 w1_we <= 1'b0;
-                w2_bram_en <= 1'b1;
-                w2_we <= 1'b1;
+                s_axis_tready <= 1'b0;
+                if (column_cnt == bias_size - 1) begin
+                  state <= STATE_PSUM;
+                end
+                else begin
+                  w2_bram_en <= 1'b1;
+                  w2_we <= 1'b1;
+                end
               end
+              else s_axis_tready <= 1'b1;
             end
           end
           else if (weight_n == 2'b01) begin
             if (w2_bram_en && w2_we) begin
-              if (weight_cnt >= feat_size>>2 - 1) begin
+              if (receive_cnt == feat_size>>2) begin
                 w2_bram_en <= 1'b0;
                 w2_we <= 1'b0;
-                w3_bram_en <= 1'b1;
-                w3_we <= 1'b1;
+                s_axis_tready <= 1'b0;
+                if (column_cnt == bias_size - 1) begin
+                  state <= STATE_PSUM;
+                end
+                else begin
+                  w3_bram_en <= 1'b1;
+                  w3_we <= 1'b1;
+                end
               end
+              else s_axis_tready <= 1'b1;
             end
           end
           else if (weight_n == 2'b10) begin
             if (w3_bram_en && w3_we) begin
-              if (weight_cnt >= feat_size>>2 - 1) begin
+              if (receive_cnt == feat_size>>2) begin
                 w3_bram_en <= 1'b0;
                 w3_we <= 1'b0;
-                w4_bram_en <= 1'b1;
-                w4_we <= 1'b1;
+                s_axis_tready <= 1'b0;
+                if (column_cnt == bias_size - 1) begin
+                  state <= STATE_PSUM;
+                end
+                else begin
+                  w4_bram_en <= 1'b1;
+                  w4_we <= 1'b1;
+                end
               end
+              else s_axis_tready <= 1'b1;
             end
           end
           else if (weight_n == 2'b11) begin
             if (w4_bram_en && w4_we) begin
-              if (weight_cnt >= feat_size>>2 - 1) begin
+              if (receive_cnt == feat_size>>2) begin
                 w4_bram_en <= 1'b0;
                 w4_we <= 1'b0;
-                w1_bram_en <= 1'b1;
-                w1_we <= 1'b1;
+                s_axis_tready <= 1'b0;
+                if (column_cnt == bias_size - 1) begin
+                  state <= STATE_PSUM;
+                end
+                else begin
+                  w1_bram_en <= 1'b1;
+                  w1_we <= 1'b1;
+                end
               end
+              else s_axis_tready <= 1'b1;
             end
           end
-          if (w4_addr[9:0] >= 10'd1023 || (!feat_size[10] && S_AXIS_TLAST)) begin
+          if (w4_addr[10]) begin
             state <= STATE_PSUM;
             w1_bram_en <= 1'b0;
             w1_we <= 1'b0;
@@ -764,7 +853,7 @@ module fc_module
           w2_bram_en <= 1'b0;
           w3_bram_en <= 1'b0;
           w4_bram_en <= 1'b0;
-          if (cnt_4[2]) state <= STATE_PSUM;          
+          if (cnt_4[1] && cnt_4[0]) state <= STATE_PSUM;          
         end
         STATE_PSUM: begin
           f_bram_en <= 1'b1;
@@ -787,12 +876,17 @@ module fc_module
           if (pe_delay[3]) state <= STATE_WRITE_RESULT;
         end
         STATE_SEND_RESULT: begin
-          m_axis_tvalid <= 1'b1;
-          state <= STATE_COMPUTE;
-          if (b_addr[9] && b_addr[8]) begin
-            m_axis_tlast <= 1'b1;
-            fc_done <= 1'b1;
-            state <= STATE_IDLE;
+          if (delay == 2'b11) begin
+            m_axis_tvalid <= 1'b1;
+            if (b_addr[9] && (b_addr[8:0]==bias_size>>2)) begin
+              m_axis_tlast <= 1'b1;
+              fc_done <= 1'b1;            
+              state <= STATE_IDLE;
+            end
+            else if (w4_addr[10]) begin
+              state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
+            end
+            else state <= STATE_COMPUTE;
           end
         end
       endcase
@@ -827,23 +921,29 @@ module fc_module
       p2_b <= 8'h00;
       p3_b <= 8'h00;
       p4_b <= 8'h00;
-      cnt_4 <= 3'b000;      
+      cnt_4 <= 3'b000;   
+      receive_cnt <= 10'h000;
+      f_receive_done <= 1'b0;
+      b_receive_done <= 1'b0;
+      w_receive_done <= 1'b0;
+      column_cnt <= 10'h000;
+      max_idx <= 4'd10;
+      max_value <= 8'h80;
+      pe_delay <= 4'h0;
     end
     else begin
       case (state)
         STATE_IDLE: begin
           delay <= 1'b0;
-          f_receive_done <= 1'b0;
-          b_receive_done <= 1'b0;
-          w_receive_done <= 1'b0;
-          if (command[0]) begin
+          if (command[0] && !f_receive_done) begin
             feat_size <= size[10:0];            
             f_addr <= 11'b0;
           end
-          else if (command[1]) begin
-            f_addr <= 11'h200;
+          else if (command[1] && !b_receive_done) begin
+            bias_size <= size[10:0];
+            b_addr <= 11'h200;
           end
-          else if (command[2]) begin            
+          else if (command[2] && !w_receive_done) begin
             w1_addr <= 11'b0;
             w2_addr <= 11'b0;
             w3_addr <= 11'b0;
@@ -853,67 +953,117 @@ module fc_module
           else ;
         end
         STATE_RECEIVE_FEATURE: begin
-          f_addr <= next_faddr;
-          fb_addr <= f_addr;
-          if (S_AXIS_TLAST) begin            
+          if (!S_AXIS_TLAST) begin
+            f_addr <= next_faddr;
+            receive_cnt <= receive_cnt + 1;
+            fb_addr <= f_addr;
+          end
+          if (receive_cnt == feat_size>>2) begin 
+            f_addr <= 10'h000;
+            receive_cnt <= 10'h000;           
             f_receive_done <= 1'b1;
           end
         end
         STATE_RECEIVE_BIAS: begin
-          b_addr <= next_baddr;
-          if (S_AXIS_TLAST) begin
+          if (!S_AXIS_TLAST) begin
+            b_addr <= next_baddr;
+            receive_cnt <= receive_cnt + 1;
+            fb_addr <= b_addr;
+          end          
+          if (receive_cnt == bias_size>>2) begin
+            b_addr <= 10'h200;
+            receive_cnt <= 10'h000; 
             b_receive_done <= 1'b1;
           end
         end
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
           if (weight_n == 2'b00) begin
             if (w1_bram_en && w1_we) begin
-              w1_addr <= next_w1addr;
-              weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size>>2 - 1) begin
-                weight_cnt <= 8'b0;
+              if (s_axis_tready) w1_addr <= next_w1addr;
+              if (receive_cnt == feat_size>>2) begin
+                receive_cnt <= 10'b0;
                 weight_n <= 2'b01;
+                if (column_cnt == bias_size - 1) begin
+                  column_cnt <= 10'b0;
+                  w_receive_done <= 1'b1;
+                  w1_addr <= 10'h000;
+                  w2_addr <= 10'h000;
+                  w3_addr <= 10'h000;
+                  w4_addr <= 10'h000;
+                end
+                else column_cnt <= column_cnt + 1;
               end
+              else receive_cnt <= receive_cnt + 1;
             end
           end
           else if (weight_n == 2'b01) begin
             if (w2_bram_en && w2_we) begin
-              w2_addr <= next_w2addr;
-              weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size>>2 - 1) begin
-                weight_cnt <= 8'b0;
-                weight_n <= 2'b01;
+              if (s_axis_tready)w2_addr <= next_w2addr;
+              if (receive_cnt == feat_size>>2) begin
+                receive_cnt <= 10'b0;
+                weight_n <= 2'b10;
+                if (column_cnt == bias_size - 1) begin
+                  column_cnt <= 10'b0;
+                  w_receive_done <= 1'b1;
+                  w1_addr <= 10'h000;
+                  w2_addr <= 10'h000;
+                  w3_addr <= 10'h000;
+                  w4_addr <= 10'h000;
+                end
+                else column_cnt <= column_cnt + 1;
               end
+              else receive_cnt <= receive_cnt + 1;
             end
           end
           else if (weight_n == 2'b10) begin
             if (w3_bram_en && w3_we) begin
-              w3_addr <= next_w3addr;
-              weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size>>2 - 1) begin
-                weight_cnt <= 8'b0;
-                weight_n <= 2'b01;
+              if (s_axis_tready)w3_addr <= next_w3addr;
+              if (receive_cnt == feat_size>>2) begin
+                receive_cnt <= 10'b0;
+                weight_n <= 2'b11;
+                if (column_cnt == bias_size - 1) begin
+                  column_cnt <= 10'b0;
+                  w_receive_done <= 1'b1;
+                  w1_addr <= 10'h000;
+                  w2_addr <= 10'h000;
+                  w3_addr <= 10'h000;
+                  w4_addr <= 10'h000;
+                end
+                else column_cnt <= column_cnt + 1;
               end
+              else receive_cnt <= receive_cnt + 1;
             end
           end
           else if (weight_n == 2'b11) begin
             if (w4_bram_en && w4_we) begin
-              w4_addr <= next_w4addr;
-              weight_cnt <= weight_cnt + 1;
-              if (weight_cnt >= feat_size>>2 - 1) begin
-                weight_cnt <= 8'b0;
-                weight_n <= 2'b01;
+              if (s_axis_tready)w4_addr <= next_w4addr;
+              if (receive_cnt == feat_size>>2) begin
+                receive_cnt <= 10'b0;
+                weight_n <= 2'b00;
+                if (column_cnt == bias_size - 1) begin
+                  column_cnt <= 10'b0;
+                  w_receive_done <= 1'b1;
+                  w1_addr <= 10'h000;
+                  w2_addr <= 10'h000;
+                  w3_addr <= 10'h000;
+                  w4_addr <= 10'h000;
+                end
+                else column_cnt <= column_cnt + 1;
               end
+              else receive_cnt <= receive_cnt + 1;
             end
           end
-          if (w4_addr[10] || (!feat_size[10] && S_AXIS_TLAST)) begin
-            weight_cnt <= 8'h00;
-            w_receive_done <= 1'b1;
+          if (w4_addr[10]) begin
+            receive_cnt <= 10'b0;
+            w1_addr <= 10'h000;
+            w2_addr <= 10'h000;
+            w3_addr <= 10'h000;
+            w4_addr <= 10'h000;
           end
         end
         STATE_READ_BIAS: begin 
           if (delay == 2'b00) begin
-            b_addr <= next_baddr ;
+            b_addr <= next_baddr;
             fb_addr <= b_addr;
             delay <= delay +1;
           end
@@ -923,7 +1073,7 @@ module fc_module
           end          
         end
         STATE_COMPUTE: begin          
-          cnt_4 = cnt_4 +1;
+          cnt_4 = cnt_4 + 1;
           if (cnt_4[2]) begin //4개 연산할 때마다  
             cnt_4 <= 3'b000;
             f_addr <= next_faddr;
@@ -931,24 +1081,24 @@ module fc_module
             w2_addr <= next_w2addr;
             w3_addr <= next_w3addr;
             w4_addr <= next_w4addr;
-            pre_weight2 <= weight2;
-            pre_weight3 <= weight3;
-            pre_weight4 <= weight4;
+            post_weight2 <= weight2;
+            post_weight3 <= weight3;
+            post_weight4 <= weight4;
             weight1 <= 32'h00000000;
             weight2 <= 32'h00000000;
             weight3 <= 32'h00000000;
             weight4 <= 32'h00000000;
             if (feat_size[10] && f_addr[10]) begin //column 계산 끝났을 때
               f_addr <= 10'h000;
-              pre_weight2 <= 32'h00000000;
+              post_weight2 <= 32'h00000000;
             end
             else if (feat_size[8] && f_addr[8]) begin
               f_addr <= 10'h000;
-              pre_weight3 <= 32'h00000000;
+              post_weight3 <= 32'h00000000;
             end
             else if (feat_size[6] && f_addr[6])begin
               f_addr <= 10'h000;
-              pre_weight4 <= 32'h00000000;
+              post_weight4 <= 32'h00000000;
             end
           end
           else if (f_addr[9:0] == 10'h000)begin //첫 4개 할 때
@@ -961,14 +1111,14 @@ module fc_module
               first1 <= 1'b0;  
               p1_b <= weight1[15:8]; //index 주의
               p2_b <= weight2[7:0];
-              p3_b <= pre_weight3[31:24];
-              p4_b <= pre_weight4[23:16];                
+              p3_b <= post_weight3[31:24];
+              p4_b <= post_weight4[23:16];                
             end
             else if (cnt_4 == 3'b010) begin
               p1_b <= weight1[23:16]; //index 주의
               p2_b <= weight2[15:8];
               p3_b <= weight3[7:0];
-              p4_b <= pre_weight4[31:24];
+              p4_b <= post_weight4[31:24];
             end
             else if (cnt_4 == 3'b011) begin
               p1_b <= weight1[31:24]; //index 주의
@@ -983,9 +1133,9 @@ module fc_module
               pe_3_en <= 1'b1;
               pe_4_en <= 1'b1;
               p1_b <= weight1[7:0]; //index 주의
-              p2_b <= pre_weight2[31:24];
-              p3_b <= pre_weight3[23:16];
-              p4_b <= pre_weight4[15:8];
+              p2_b <= post_weight2[31:24];
+              p3_b <= post_weight3[23:16];
+              p4_b <= post_weight4[15:8];
             end          
           end  
           else begin // 첫 4개도 아니고 cnt_4도 4가 아닐 때 
@@ -997,14 +1147,14 @@ module fc_module
               first1 <= 1'b0;  
               p1_b <= weight1[15:8]; //index 주의
               p2_b <= weight2[7:0];
-              p3_b <= pre_weight3[31:24];
-              p4_b <= pre_weight4[23:16];                
+              p3_b <= post_weight3[31:24];
+              p4_b <= post_weight4[23:16];                
             end
             else if (cnt_4 == 3'b010) begin
               p1_b <= weight1[23:16]; //index 주의
               p2_b <= weight2[15:8];
               p3_b <= weight3[7:0];
-              p4_b <= pre_weight4[31:24];
+              p4_b <= post_weight4[31:24];
             end
             else if (cnt_4 == 3'b011) begin
               p1_b <= weight1[31:24]; //index 주의
@@ -1014,14 +1164,14 @@ module fc_module
             end
             else if (cnt_4 == 3'b000)begin
               p1_b <= weight1[7:0]; //index 주의
-              p2_b <= pre_weight2[31:24];
-              p3_b <= pre_weight3[23:16];
-              p4_b <= pre_weight4[15:8];
+              p2_b <= post_weight2[31:24];
+              p3_b <= post_weight3[23:16];
+              p4_b <= post_weight4[15:8];
             end          
           end        
         end
         STATE_PSUM: begin          
-          if (!delay[0]) begin
+          if (!delay[1]) begin
             delay <= delay +1;
           end
           else begin
@@ -1070,10 +1220,38 @@ module fc_module
           tdata[22:16] <= bias_add_result3[27] ? (8'b0000_0000) : 
                           ((bias_add_result3[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result3[12:6]} : 8'b0111_1111);
           tdata[30:24] <= bias_add_result4[27] ? (8'b0000_0000) : 
-                          ((bias_add_result4[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);   
+                          ((bias_add_result4[26:12] == 15'b0_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);
+          delay <= 1'b0;
         end
         STATE_SEND_RESULT: begin
           m_axis_tdata <= tdata;
+          delay <= delay + 1;
+          if (bias_size == 11'd10) begin
+            if (delay == 2'b00) begin
+              if (!max_comp1) begin
+                max_idx <= 4*(b_addr[1:0]-1);
+                max_value <= tdata[7:0];
+              end
+            end
+            else if (delay == 2'b01) begin
+              if (!max_comp2) begin
+                max_idx <= 4*(b_addr[1:0]-1)+1;
+                max_value <= tdata[15:8];
+              end              
+            end
+            else if (delay == 2'b10) begin
+              if (!max_comp3) begin
+                max_idx <= 4*(b_addr[1:0]-1)+2;
+                max_value <= tdata[23:16];
+              end              
+            end
+            else if (delay == 2'b11) begin
+              if (!max_comp4) begin
+                max_idx <= 4*(b_addr[1:0]-1)+3;
+                max_value <= tdata[31:24];
+              end            
+            end
+          end
         end
       endcase
     end
