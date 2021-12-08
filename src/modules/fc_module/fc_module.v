@@ -629,7 +629,7 @@ module fc_module
 
   reg [5:0] cnt_4;
 
-  wire [15:0] next_faddr, next_w1addr,next_w2addr,next_w3addr,next_w4addr, next_baddr;
+  wire [15:0] next_faddr, next_w1addr, next_w2addr, next_w3addr, next_w4addr, next_baddr, next_cnt;
   CLA_16Bit faddr_adder (
     .A({6'h00,f_addr[9:0]}),
     .B(16'h0001),
@@ -672,6 +672,14 @@ module fc_module
     .B(16'h0001),
     .C_in(1'b0),
     .S(next_baddr),
+    .C_out()
+  );
+
+  CLA_16Bit cnt_adder (
+    .A({6'h00, receive_cnt[9:0]}),
+    .B(16'h0001),
+    .C_in(1'b0),
+    .S(next_cnt),
     .C_out()
   );
 
@@ -746,7 +754,7 @@ module fc_module
           end
         end
         STATE_RECEIVE_FEATURE: begin
-          if (receive_cnt == feat_size>>2 - 1) begin            
+          if (next_cnt[10:0] == feat_size>>2) begin            
             state <= STATE_IDLE;
             s_axis_tready <= 1'b0;
             f_bram_en <= 1'b0;
@@ -754,7 +762,7 @@ module fc_module
           end
         end
         STATE_RECEIVE_BIAS: begin
-          if (receive_cnt == bias_size>>2 - 1) begin            
+          if (next_cnt[10:0] == bias_size>>2) begin            
             state <= STATE_IDLE;
             s_axis_tready <= 1'b0;
             f_bram_en <= 1'b0;
@@ -763,7 +771,7 @@ module fc_module
         end
 
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
-          if (receive_cnt == feat_size>>2 - 1) begin
+          if (next_cnt[10:0] == feat_size>>2) begin
             if (column_cnt == bias_size - 1) begin
               s_axis_tready <= 1'b0;
               state <= STATE_PSUM;
@@ -930,10 +938,10 @@ module fc_module
         end
         STATE_RECEIVE_FEATURE: begin
           if (!S_AXIS_TLAST) begin
-            f_addr <= next_faddr;
-            receive_cnt <= receive_cnt + 1;
+            f_addr <= next_faddr[10:0];
+            receive_cnt <= next_cnt[10:0];
           end
-          if (receive_cnt == feat_size>>2 - 1) begin 
+          if (next_cnt[10:0] == feat_size>>2) begin 
             f_addr <= 10'h000;
             receive_cnt <= 10'h000;           
             f_receive_done <= 1'b1;
@@ -941,10 +949,10 @@ module fc_module
         end
         STATE_RECEIVE_BIAS: begin
           if (!S_AXIS_TLAST) begin
-            b_addr <= next_baddr;
-            receive_cnt <= receive_cnt + 1;
+            b_addr <= next_baddr[10:0];
+            receive_cnt <= next_cnt[10:0];
           end          
-          if (receive_cnt == bias_size>>2 - 1) begin
+          if (next_cnt[10:0] == bias_size>>2 ) begin
             b_addr <= 10'h200;
             receive_cnt <= 10'h000; 
             b_receive_done <= 1'b1;
@@ -952,16 +960,16 @@ module fc_module
         end
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
           if (!S_AXIS_TLAST) begin
-            receive_cnt <= receive_cnt + 1;
+            receive_cnt <= next_cnt[10:0];
             case (weight_n)
-              2'b00: w1_addr <= next_w1addr;
-              2'b01: w2_addr <= next_w2addr;
-              2'b10: w3_addr <= next_w3addr;
-              2'b11: w4_addr <= next_w4addr;
+              2'b00: w1_addr <= next_w1addr[10:0];
+              2'b01: w2_addr <= next_w2addr[10:0];
+              2'b10: w3_addr <= next_w3addr[10:0];
+              2'b11: w4_addr <= next_w4addr[10:0];
               default: ;
             endcase
           end
-          if (receive_cnt == feat_size>>2 - 1) begin
+          if (next_cnt[10:0] == feat_size>>2) begin
             receive_cnt <= 10'b0;
             if (column_cnt == bias_size - 1) begin
               column_cnt <= 10'b0;
@@ -993,7 +1001,7 @@ module fc_module
         end
         STATE_READ_BIAS: begin 
           if (delay == 2'b00) begin
-            b_addr <= next_baddr;
+            b_addr <= next_baddr[10:0];
             delay <= delay +1;
           end
           else if (!delay[1]) delay <= delay +1;
@@ -1061,11 +1069,11 @@ module fc_module
           end
           else begin
             delay <= 2'b00;
-            f_addr <= next_faddr;
-            w1_addr <= next_w1addr;
-            w2_addr <= next_w2addr;
-            w3_addr <= next_w3addr;
-            w4_addr <= next_w4addr;
+            f_addr <= next_faddr[10:0];
+            w1_addr <= next_w1addr[10:0];
+            w2_addr <= next_w2addr[10:0];
+            w3_addr <= next_w3addr[10:0];
+            w4_addr <= next_w4addr[10:0];
             weight1[63:32] <= {w1_dout[7:0],w1_dout[15:8], w1_dout[23:16], w1_dout[31:24]};
             weight2[55:24] <= {w2_dout[7:0],w2_dout[15:8], w2_dout[23:16], w2_dout[31:24]};
             weight3[47:16] <= {w3_dout[7:0],w3_dout[15:8], w3_dout[23:16], w3_dout[31:24]};
