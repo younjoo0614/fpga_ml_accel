@@ -32,6 +32,16 @@ module conv_module
     //////////////////////////////////////////////////////////////////////////
 
   );
+  localparam STATE_IDLE = 4'd0,
+  STATE_RECEIVE_FEATURE = 4'd1,
+  STATE_RECEIVE_BIAS = 4'd2,
+  STATE_RECEIVE_WEIGHT = 4'd3,
+  STATE_READ_BIAS = 4'd4,
+  STATE_COMPUTE = 4'd5,
+  STATE_PSUM = 4'd6,
+  STATE_ADD_BIAS = 4'd7,
+  STATE_WRITE_RESULT = 4'd8,
+  STATE_SEND_RESULT = 4'd9;
   
   reg                                           m_axis_tuser;
   reg [C_S00_AXIS_TDATA_WIDTH-1 : 0]            m_axis_tdata;
