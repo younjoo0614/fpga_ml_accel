@@ -509,7 +509,13 @@ module top_simulation
         
         
         /////////////////////// ?????? ???? begin ////////////////////////////
-        .size(receive_size)
+        .size(receive_size),
+        .command(COMMAND),
+        .fc_start(fc_start),
+        .F_writedone(F_writedone),
+        .B_writedone(B_writedone),
+        .W_writedone(W_writedone),
+        .FC_DONE(fc_done)
         /////////////////////// ?????? ???? end //////////////////////////////////////
         );
         
