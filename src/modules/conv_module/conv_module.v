@@ -25,11 +25,15 @@ module conv_module
     output wire M_AXIS_TVALID, 
 
     input conv_start, 
-    output reg conv_done
+    output reg conv_done,
 
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
+    input[2:0] command,
+    output wire F_writedone,
+    output wire B_writedone,
+    output wire RDY_TO_SEND
 
   );
   localparam STATE_IDLE = 4'd0,
@@ -48,7 +52,7 @@ module conv_module
   reg [(C_S00_AXIS_TDATA_WIDTH/8)-1 : 0]        m_axis_tkeep;
   reg                                           m_axis_tlast;
   reg                                           m_axis_tvalid;
-  wire                                          s_axis_tready;
+  reg                                           s_axis_tready;
   
   assign S_AXIS_TREADY = s_axis_tready;
   assign M_AXIS_TDATA = m_axis_tdata;
@@ -56,9 +60,114 @@ module conv_module
   assign M_AXIS_TVALID = m_axis_tvalid;
   assign M_AXIS_TUSER = 1'b0;
   assign M_AXIS_TKEEP = {(C_S00_AXIS_TDATA_WIDTH/8) {1'b1}};
+  
 
   ////////////////////////////////////////////////////////////////////////////
   // TODO : Write your code here
   ////////////////////////////////////////////////////////////////////////////
+  reg [3:0] state;
+  reg f_receive_done, b_receive_done, w_receive_done, ready_to_send, send_done;
+
+  assign F_writedone = f_receive_done;
+  assign B_writedone = b_receive_done;
+  assign W_writedone = w_receive_done;
+  assign RDY_TO_SEND = ready_to_send;
+
+  always @(posedge clk) begin
+    if (!rstn) begin
+      state <= STATE_IDLE;
+    end
+    else begin
+      case (state)
+        STATE_IDLE: begin
+          s_axis_tready <= 1'b0;
+          if (command[2]) begin
+            state <= STATE_SEND_RESULT;
+          end
+          else if (command[1]) begin
+            if (command[0]) begin
+              state <= STATE_COMPUTE;
+            end
+            else begin
+              state <= STATE_RECEIVE_BIAS;
+            end
+          end
+          else begin
+            state <= STATE_RECEIVE_FEATURE;
+          end
+        end
+        STATE_RECEIVE_FEATURE: begin
+          if (f_receive_done) begin
+            state <= STATE_IDLE;
+          end
+        end
+        STATE_RECEIVE_BIAS: begin
+          if (b_receive_done) begin
+            state <= STATE_RECEIVE_WEIGHT;
+          end
+        end
+        STATE_RECEIVE_WEIGHT: begin
+          
+        end
+        STATE_READ_BIAS: begin
+          
+        end
+        STATE_COMPUTE: begin
+          if (ready_to_send) begin
+            state <= STATE_IDLE;
+          end
+        end
+        STATE_PSUM: begin
+          
+        end
+        STATE_WRITE_RESULT: begin
+          
+        end
+        STATE_SEND_RESULT: begin
+          if (send_done) begin
+            state <= STATE_IDLE;
+          end
+        end
+      endcase
+    end
+  end
+  
+  // data path
+  always @(posedge clk) begin
+    if (!rstn) begin
+    end
+    else begin
+      case (state)
+        STATE_IDLE: begin
+          
+        end
+        STATE_RECEIVE_FEATURE: begin
+          
+          
+        end
+        STATE_RECEIVE_BIAS: begin
+          
+        end
+        STATE_RECEIVE_WEIGHT: begin
+          
+        end
+        STATE_READ_BIAS: begin
+          
+        end
+        STATE_COMPUTE: begin
+          
+        end
+        STATE_PSUM: begin
+          
+        end
+        STATE_WRITE_RESULT: begin
+          
+        end
+        STATE_SEND_RESULT: begin
+          
+        end
+      endcase
+    end
+  end
   
 endmodule
