@@ -465,6 +465,7 @@ module conv_module
   reg [71:0] weight;
   reg [287:0] weight_36;
   reg [27:0] pe_result_temp;
+  reg [7:0] bias;
   reg [1:0] cnt_3;
   reg [3:0] cnt_9;
   reg [4:0] cnt_18;
@@ -659,7 +660,14 @@ module conv_module
           end
         end
         STATE_READ_BIAS: begin
-          
+          // 아래 두 줄은 state를 STATE_READ_BIAS로 바꿀 때 같이 넣어주세요,,
+          // b_addr <= outch_cnt >> 2;
+          // f_bram_en <= 1'b1;
+
+          if (read_delay[1]) begin
+            state <= STATE_SEND_RESULT;
+            f_bram_en <= 1'b0;
+          end
         end
         STATE_COMPUTE: begin
           if (cnt_width == flen) begin
@@ -697,7 +705,9 @@ module conv_module
           end
         end
         STATE_WRITE_RBRAM: begin
-          
+          if (~|inch_cnt || read_delay[1]) begin
+            r_we <= 1'b1;
+          end
         end
         STATE_SEND_RESULT: begin
           if (send_done) begin
@@ -804,7 +814,11 @@ module conv_module
           end
         end
         STATE_READ_BIAS: begin
-          
+          if (read_delay[1]) begin
+            bias <= f_dout[outch_cnt[1:0]*8-1 -:8];
+            read_delay <= 2'b00;
+          end
+          else read_delay <= read_delay + 1;
         end
         STATE_COMPUTE: begin
           if (cnt_18 == 5'd0) begin
@@ -818,7 +832,7 @@ module conv_module
           else if (cnt_18[5] && cnt_18[1]) begin
             cnt_width <= cnt_width + 1;
           end
-          else  begin
+          else begin
             cnt_18 <= cnt_18 + 1;
             feat <= feat << 8;
             weight <= feat << 8;
@@ -838,7 +852,7 @@ module conv_module
                 go_read_weight <= 1'b1;
                 cnt_height <= 5'h0;
               end
-              else  begin //두 번째 줄 읽을 때
+              else begin //두 번째 줄 읽을 때
                 cnt_3 <= 2'b01;
                 if (flen[5]) feat_3[1] <= {8'h00,feat_temp,8'h00};
                 else if (flen[4]) feat_3[1][271:128] <= {8'h00,feat_temp,8'h00};
@@ -914,7 +928,7 @@ module conv_module
           end
         end
         STATE_WRITE_RBRAM: begin
-          if (inch_cnt == 9'h000) begin
+          if (~|inch_cnt) begin
             r_we <= 1'b1;
             r_addr <= next_raddr;
             partial_result <= pe_result_temp;
