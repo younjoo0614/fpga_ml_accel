@@ -448,7 +448,7 @@ module conv_module
   reg pe_en, first;
   reg [11:0] f_addr;
   reg [6:0] b_addr;
-  reg [9:0] w_addr;
+  reg [11:0] w_addr;
   reg [10:0] r_addr;
   wire [11:0] fb_addr;
   wire [15:0] next_faddr, next_baddr, next_waddr, next_raddr;
@@ -497,8 +497,8 @@ module conv_module
   .wea(f_we)
   );
 
-  sram_32x1024 weight_sram_32x1024(
-  .addra(w_addr[9:0]),
+  sram_32x1024 weight_sram_32x2560(
+  .addra(w_addr),
   .clka(clk),
   .dina(din),
   .douta(w_dout),
@@ -507,7 +507,7 @@ module conv_module
   );  
 
   sram_32x1024 result_sram_32x1024 (
-    .addra(w_addr[9:0]),
+    .addra(r_addr[9:0]),
     .clka(clk),
     .dina(din),
     .douta(w_dout),
@@ -544,7 +544,7 @@ module conv_module
   );
 
   CLA_16Bit waddr_adder (
-    .A({6'h00,w_addr[8:0]}),
+    .A({4'h00,w_addr[11:0]}),
     .B(16'h0001),
     .C_in(1'b0),
     .S(next_waddr),
@@ -641,8 +641,7 @@ module conv_module
         STATE_RECEIVE_WEIGHT: begin
           if (S_AXIS_TVALID) begin
             if (cnt_filter[3]) begin // 4개의 filter 받을 때 마다
-              cnt_filter <= 3'b0;
-              if (cnt_ch == (num_inch>>2)-1) begin
+              if (cnt_ch == num_inch-1) begin // input channel * 4 개의 filter를 받음
                 state <= STATE_COMPUTE;
                 s_axis_tready <= 1'b0;
                 w_bram_en <= 1'b0;
@@ -707,7 +706,7 @@ module conv_module
     if (!rstn) begin
       f_addr <= 12'h000;
       b_addr <= 7'h00;
-      w_addr <= 10'h000;
+      w_addr <= 12'h000;
       r_addr <= 11'h000;
       read_delay <= 2'b0;
       cnt_9 <= 4'h0;
@@ -780,7 +779,7 @@ module conv_module
           if (S_AXIS_TVALID) begin
             if (cnt_filter[3]) begin // 4개의 filter 받을 때 마다
               cnt_filter <= 3'b0;
-              if (cnt_ch == (num_inch>>2)-1) begin
+              if (cnt_ch == num_inch-1) begin // input channel * 4 개의 filter를 받음
                 w_addr <= 10'b0;
                 cnt_ch <= 7'b0;
               end
