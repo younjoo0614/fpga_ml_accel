@@ -642,10 +642,10 @@ module conv_module
             end
           end
         end
-
         STATE_RECEIVE_BIAS: begin
           if (b_receive_done) begin
             state <= STATE_RECEIVE_WEIGHT;
+            w_addr <= 
             s_axis_tready <= 1'b0;
             w_bram_en <= 1'b1;
             w_we <= 1'b1;
@@ -662,14 +662,31 @@ module conv_module
             end
           end
         end
-        STATE_RECEIVE_WEIGHT: begin
+        STATE_RECEIVE_WEIGHT: begin //3x3x3일 때는 직육면체 4개 받고 나머지는 1개씩 받아옴
           if (S_AXIS_TVALID) begin
-            if (cnt_filter[3]) begin // 4개의 filter 받을 때 마다
-              if (cnt_ch == num_inch-1) begin // input channel * 4 개의 filter를 받음
-                state <= STATE_COMPUTE;
-                s_axis_tready <= 1'b0;
+          //   if (cnt_filter[2]) begin // 4개의 filter 받을 때 마다
+          //     if (cnt_ch == num_inch-1) begin // input channel * 4 개의 filter를 받음
+          //       state <= STATE_COMPUTE;
+          //       s_axis_tready <= 1'b0;
+          //       w_bram_en <= 1'b0;
+          //       w_we <= 1'b0;
+          //     end
+          //   end
+          // end
+            if (num_INCH[1] && num_INCH[0]) begin //INCH 3일 때
+              if (cnt_ch == 8'd26) begin
+                state <= STATE_READ_FEAT;
                 w_bram_en <= 1'b0;
                 w_we <= 1'b0;
+                s_axis_tready <= 1'b0;
+              end
+            end
+            else begin
+              if (cnt_ch == (num_INCH >>2) * 9 -1) begin
+                state <= STATE_READ_FEAT;
+                w_bram_en <= 1'b0;
+                w_we <= 1'b0;
+                s_axis_tready <= 1'b0;
               end
             end
           end
@@ -727,7 +744,7 @@ module conv_module
                 if (cnt_height == flen) begin
                   cnt_height <= 5'd00;
                   if (inch_cnt == num_INCH) begin
-                    //inch_cnt <= 9'd0;
+                    inch_cnt <= 9'd0;
                     state <= STATE_READ_BIAS;
                     r_bram_en <= 1'b0;
                     b_addr <= outch_cnt >> 2;
@@ -760,30 +777,52 @@ module conv_module
           if (cnt_3[1] && cnt_3[0]) begin
             state <= STATE_SEND_RESULT;
             m_axis_tvalid <= 1'b1;
+            r_bram_en <= 1'b0;
           end
         end
         STATE_SEND_RESULT: begin
           if (send_done) begin
             state <= STATE_IDLE;
           end
-          else if (cnt_output == flen * flen >> 4) begin            
+          else if (cnt_output == flen * flen >> 2) begin            
             if (outch_cnt == num_OUTCH) begin
               outch_cnt <= 9'd0;    
               send_done <= 1'b1;     
-              m_axis_tvalid <= 1'b0;         
+              m_axis_tvalid <= 1'b0;      
             end
             else begin
-              state <= STATE_READ_FEAT;
-              m_axis_tvalid <= 1'b0;
-              cnt_output <= 9'h0;
+              if (num_INCH[1]&& num_INCH[0]) begin
+                m_axis_tvalid <= 1'b0;
+                cnt_output <= 9'h0;
+                if (!outch_cnt[1] && !outch_cnt[0]) begin
+                  state <= STATE_RECEIVE_WEIGHT;
+                  w_addr <= 12'h000;
+                  w_bram_en <= 1'b1;
+                  w_we <= 1'b1;
+                  s_axis_tready <= 1'b1;
+                end
+                else begin 
+                  state <= STATE_READ_FEAT;
+                  f_bram_en <= 1'b1;
+                end
+              end
+              else begin
+                m_axis_tvalid <= 1'b0;
+                cnt_output <= 9'h0;                                 
+                state <= STATE_RECEIVE_WEIGHT;
+                w_addr <= 12'h000;
+                w_bram_en <= 1'b1;
+                w_we <= 1'b1;
+                s_axis_tready <= 1'b1;                  
+              end
             end
           end
           else begin
             state <= STATE_PREPARE_RESULT;
             m_axis_tvalid <= 1'b0;
             cnt_output <= cnt_output + 1;
-          end
-          
+            r_bram_en <= 1'b1;
+          end          
         end
       endcase
     end
@@ -866,20 +905,41 @@ module conv_module
         end
         STATE_RECEIVE_WEIGHT: begin
           if (S_AXIS_TVALID) begin
-            if (cnt_filter[3]) begin // 4개의 filter 받을 때 마다
-              cnt_filter <= 3'b0;
-              if (cnt_ch == num_inch-1) begin // input channel * 4 개의 filter를 받음
+          //   if (cnt_filter[2]) begin // 4개의 filter 받을 때 마다
+          //     cnt_filter <= 3'b0;
+          //     if (cnt_ch == num_inch-1) begin // input channel * 4 개의 filter를 받음
+          //       w_addr <= 10'b0;
+          //       cnt_ch <= 7'b0;
+          //     end
+          //     else begin
+          //       w_addr <= next_waddr[9:0];
+          //       cnt_ch <= cnt_ch + 1;
+          //     end
+          //   end
+          //   else begin
+          //     w_addr <= next_waddr[9:0];
+          //     cnt_filter <= cnt_filter + 1;
+          //   end
+          // end
+            if (num_INCH[1] && num_INCH[0]) begin //INCH 3일 때
+              if (cnt_ch == 8'd26) begin
+                cnt_ch <= 8'h00;
                 w_addr <= 10'b0;
-                cnt_ch <= 7'b0;
               end
               else begin
-                w_addr <= next_waddr[9:0];
                 cnt_ch <= cnt_ch + 1;
+                w_addr <= next_waddr[9:0];
               end
             end
             else begin
-              w_addr <= next_waddr[9:0];
-              cnt_filter <= cnt_filter + 1;
+              if (cnt_ch == (num_INCH >>2) * 9 -1 ) begin
+                cnt_ch <= 8'h0;
+                w_addr <= 10'b0;
+              end
+              else begin 
+                cnt_ch <= cnt_ch + 1;
+                w_addr <= next_waddr[9:0];
+              end
             end
           end
         end
@@ -991,15 +1051,21 @@ module conv_module
           end
         end
         STATE_READ_WEIGHT: begin
-          if (cnt_9[3] && cnt_9[0]) begin
+          if (cnt_9[3] && cnt_9[0]) begin //9됐을 때
             go_compute <= 1'b1;           
           end
           else begin
             if (read_delay[1]) begin
-              w_addr <= next_waddr;
-              weight_36[31:0] <= w_dout;
-              read_delay <= 2'b00;
-              cnt_9 <= cnt_9 +1;
+              if (num_INCH[1]&& num_INCH[0]) begin
+                // 1. 3x3x3 일 때만 weight를 12채널 즉 108 바이트 읽어오는 방법
+                // 2. 저장할 때부터 다르게 저장하는 방법 중에 선택해야 할 듯 
+              end
+              else begin
+                w_addr <= next_waddr;
+                weight_36[31:0] <= {w_dout[7:0],w_dout[15:8], w_dout[23:16], w_dout[31:24]};
+                read_delay <= 2'b00;
+                cnt_9 <= cnt_9 +1;
+              end              
             end
             else if (read_delay[1]) begin
               read_delay <= read_delay +1;
@@ -1054,6 +1120,7 @@ module conv_module
               end
             endcase            
           end
+          else read_delay <= read_delay + 1;
         end
         STATE_SEND_RESULT: begin
           m_axis_tdata <= tdata;
