@@ -461,13 +461,14 @@ module conv_module
   reg [71:0] feat;
   reg [255:0] feat_temp;
   reg [71:0] weight;
+  reg [287:0] weight_36;
   reg [27:0] pe_result_temp;
   reg [1:0] cnt_3;
   reg [3:0] cnt_9;
   reg [4:0] cnt_18;
   reg [5:0] cnt_32,cnt_width, cnt_height;
   reg [10:0] cnt_1024;
-  reg [8:0] outch_cnt_256, in_ch_cnt;
+  reg [8:0] outch_cnt, inch_cnt;
   reg go_read_weight, go_compute;
 
   assign F_writedone = f_receive_done;
@@ -477,8 +478,8 @@ module conv_module
   assign SEND_DONE = send_done;
   assign din = S_AXIS_TDATA;
   assign r_din = partial_result;
-  assign p1_a = feat[71:63];
-  assign p1_b = weight[71:63];
+  assign p1_a = feat[71:64];
+  assign p1_b = weight[71:64];
 
   sram_32x3200 feat_sram_32x3200(
   .addra(f_addr[10:0]),
@@ -606,19 +607,19 @@ module conv_module
             pe_en <= 1'b0;
             calc_all_done <= 1'b0;
           end
-          if (cnt_height == flen) begin
-            state <= STATE_READ_FEAT;
-            f_bram_en <= 1'b1;
-          end
+          
         end
         STATE_READ_FEAT: begin
-          if (cnt_height == flen) begin
+          if (go_read_weight) begin
             state <= STATE_READ_WEIGHT;
             go_read_weight <= 1'b0;
             w_bram_en <= 1'b1;
             f_bram_en <= 1'b0;
           end
-          
+          else begin
+            state <= STATE_COMPUTE;
+            pe_en <= 1'b1;
+          end
         end
         STATE_READ_WEIGHT: begin
           if (go_compute) begin
@@ -652,6 +653,9 @@ module conv_module
       cnt_18 <= 5'h00;
       cnt_1024 <= 11'h000;
       cnt_32 <= 6'b0;
+      inch_cnt <= 9'h001;
+      outch_cnt <= 9'h0;
+      weight_36 <= 288'h0;
       partial_result <= 32'h00000000;
       feat_3[0] <= 272'h0;
       feat_3[1] <= 272'h0;
@@ -685,9 +689,15 @@ module conv_module
           if (cnt_width == flen) begin
             
           end
+          else begin
+            cnt_width <= cnt_width + 1;
+            // feat <= {feat_3[0][271-cnt_width*8-:24], feat_3[1][271-cnt_width*8-:24], feat_3[2][271-cnt_width*8-:24]};
+            // weight_9 <= weight;
+            
+          end
         end
         STATE_READ_FEAT: begin
-          if (~|cnt_32) begin  // 첫 번째 줄 읽을 때 
+          if (~|cnt_height) begin  // 첫 번째 줄 읽을 때 
             feat_3[0] <= 272'h0;
             if (cnt_9 == flen>>2) begin 
               cnt_9 <= 4'h0;
@@ -698,6 +708,7 @@ module conv_module
                 else if (flen[3]) feat_3[2][271:192] <={8'h00,feat_temp,8'h00};
                 else feat_3[2][271:224] <= {8'h00,feat_temp,8'h00};
                 go_read_weight <= 1'b1;
+                cnt_height <= 5'h0;
               end
               else begin //두 번째 줄 읽을 때
                 cnt_3 <= 2'b01;
@@ -722,10 +733,10 @@ module conv_module
               end
             end
           end
-          else if (&cnt_32) begin //마지막 줄 읽을 때 
+          else if (cnt_height == flen-1) begin //마지막 줄 읽을 때 
             feat_3[0] <= feat_3[1];
             feat_3[1] <= feat_3[2];
-            feat_3[2] <= 272'h0;            
+            feat_3[2] <= 272'h0;      
           end
           else begin  //마지막도 아니고 첫 번째도 아닌 줄
             if (cnt_9 == flen>>2) begin 
@@ -754,34 +765,23 @@ module conv_module
           end
         end
         STATE_READ_WEIGHT: begin
-          if (cnt_3[1] && cnt_3[0]) begin
+          if (cnt_9[3] && cnt_9[0]) begin
             go_compute <= 1'b1;           
-          end
-          else if (cnt_3[1]) begin
-            if (read_delay[1]) begin
-              w_addr <= next_waddr;
-              weight[7:0] <= w_dout[7:0];
-              read_delay <= 2'b00;
-            end
-            else read_delay <= read_delay +1;
-          end
-          else if (cnt_3[0]) begin
-            if (read_delay[1]) begin
-              w_addr <= next_waddr;
-              weight[7:0] <= w_dout[7:0];
-              read_delay <= 2'b00;
-              weight[39:8] <= {w_dout[7:0],w_dout[15:8], w_dout[23:16], w_dout[31:24]};
-            end
-            else read_delay <= read_delay +1;
           end
           else begin
             if (read_delay[1]) begin
               w_addr <= next_waddr;
-              weight[7:0] <= w_dout[7:0];
+              weight_36[31:0] <= w_dout[7:0];
               read_delay <= 2'b00;
-              weight[71:40] <= {w_dout[7:0],w_dout[15:8], w_dout[23:16], w_dout[31:24]};
+              cnt_9 <= cnt_9 +1;
             end
-            else read_delay <= read_delay +1;
+            else if (read_delay[1]) begin
+              read_delay <= read_delay +1;
+              weight_36 <= weight <<32;
+            end
+            else begin
+              read_delay <= read_delay + 1;
+            end
           end
         end
         STATE_WRITE_RBRAM: begin
