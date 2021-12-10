@@ -452,7 +452,7 @@ module conv_module
   reg [10:0] r_addr;
   wire [11:0] fb_addr;
   wire [15:0] next_faddr, next_baddr, next_waddr, next_raddr;
-  wire [31:0] din, f_dout, w_dout, r_din;
+  wire [31:0] din, f_dout, w_dout, r_dout, r_din;
   reg f_bram_en, w_bram_en, r_bram_en, f_we, w_we, r_we;
   wire [7:0] p1_a, p1_b;
   reg [1:0] read_delay;
@@ -509,10 +509,10 @@ module conv_module
   sram_32x1024 result_sram_32x1024 (
     .addra(r_addr[9:0]),
     .clka(clk),
-    .dina(din),
-    .douta(w_dout),
-    .ena(w_bram_en),
-    .wea(w_we)
+    .dina(r_din),
+    .douta(r_dout),
+    .ena(r_bram_en),
+    .wea(r_we)
   );
 
   pe pe1 (
@@ -555,6 +555,14 @@ module conv_module
     .B(16'h0001),
     .C_in(1'b0),
     .S(next_raddr),
+    .C_out()
+  );
+
+  CLA_28Bit partial_adder (
+    .A(r_dout),
+    .B(pe_result_temp),
+    .C_in(1'b0),
+    .S(partial_result),
     .C_out()
   );
 
@@ -657,6 +665,7 @@ module conv_module
           if (cnt_width == flen) begin
             cnt_width <= 5'd0;
             cnt_height <= cnt_height + 1;
+            state <= STATE_WRITE_RBRAM;
             if (cnt_height == flen) begin
               inch_cnt <= inch_cnt + 1;
               cnt_height <= 5'd10;
@@ -795,13 +804,7 @@ module conv_module
           end
         end
         STATE_READ_BIAS: begin
-          if (cnt_18 == 5'd17) begin
-            
-          end
-          else begin
-            feat <= feat << 8;
-
-          end
+          
         end
         STATE_COMPUTE: begin
           if (cnt_18 == 5'd0) begin
@@ -813,7 +816,7 @@ module conv_module
             cnt_18 <= cnt_18 + 1;
           end
           else if (cnt_18[5] && cnt_18[1]) begin
-            cnt_width <= cnt_width;
+            cnt_width <= cnt_width + 1;
           end
           else  begin
             cnt_18 <= cnt_18 + 1;
@@ -897,7 +900,7 @@ module conv_module
           else begin
             if (read_delay[1]) begin
               w_addr <= next_waddr;
-              weight_36[31:0] <= w_dout[7:0];
+              weight_36[31:0] <= w_dout;
               read_delay <= 2'b00;
               cnt_9 <= cnt_9 +1;
             end
@@ -911,7 +914,17 @@ module conv_module
           end
         end
         STATE_WRITE_RBRAM: begin
-          
+          if (inch_cnt == 9'h000) begin
+            r_we <= 1'b1;
+            r_addr <= next_raddr;
+            partial_result <= pe_result_temp;
+          end
+          else begin
+            if (read_delay[1] ) begin
+              r_we <= 1'b1;
+              r_addr <= next_raddr;
+            end
+          end
         end
         STATE_SEND_RESULT: begin
           
