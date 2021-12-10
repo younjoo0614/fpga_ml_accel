@@ -447,9 +447,11 @@ module conv_module
   reg f_receive_done, b_receive_done, w_receive_done, send_done, calc_all_done;
   reg pe_en, first;
   reg [11:0] f_addr;
-  reg [9:0] w_addr; 
+  reg [6:0] b_addr;
+  reg [9:0] w_addr;
   reg [10:0] r_addr;
-  wire [15:0] next_faddr, next_waddr, next_raddr;
+  wire [11:0] fb_addr;
+  wire [15:0] next_faddr, next_baddr, next_waddr, next_raddr;
   wire [31:0] din, f_dout, w_dout, r_din;
   reg f_bram_en, w_bram_en, r_bram_en, f_we, w_we, r_we;
   wire [7:0] p1_a, p1_b;
@@ -465,9 +467,13 @@ module conv_module
   reg [1:0] cnt_3;
   reg [3:0] cnt_9;
   reg [4:0] cnt_18;
-  reg [5:0] cnt_32,cnt_width, cnt_height;
+  reg [5:0] cnt_32, cnt_width, cnt_height;
   reg [10:0] cnt_1024;
+  reg [5:0] cnt_row, cnt_col;
+  reg [3:0] cnt_filter;
+  reg [7:0] cnt_ch;
   reg [8:0] outch_cnt_256, in_ch_cnt;
+
   reg go_read_weight, go_compute;
 
   assign F_writedone = f_receive_done;
@@ -479,9 +485,10 @@ module conv_module
   assign r_din = partial_result;
   assign p1_a = feat[71:63];
   assign p1_b = weight[71:63];
+  assign fb_addr = (state == STATE_RECEIVE_BIAS || state == STATE_READ_BIAS) ? {5'b10000, b_addr} : f_addr;
 
-  sram_32x3200 feat_sram_32x3200(
-  .addra(f_addr[10:0]),
+  sram_32x2112 feat_sram_32x2112(
+  .addra(fb_addr),
   .clka(clk),
   .dina(din),
   .douta(f_dout),
@@ -527,14 +534,22 @@ module conv_module
     .C_out()
   );
 
-  CLA_16Bit w1addr_adder (
+  CLA_16Bit baddr_adder (
+    .A({9'h000,b_addr[6:0]}),
+    .B(16'h0001),
+    .C_in(1'b0),
+    .S(next_baddr),
+    .C_out()
+  );
+
+  CLA_16Bit waddr_adder (
     .A({6'h00,w_addr[8:0]}),
     .B(16'h0001),
     .C_in(1'b0),
     .S(next_waddr),
     .C_out()
   );
-  CLA_16Bit w2addr_adder (
+  CLA_16Bit raddr_adder (
     .A({6'h00, r_addr[9:0]}),
     .B(16'h0001),
     .C_in(1'b0),
@@ -575,11 +590,15 @@ module conv_module
             else begin
               state <= STATE_RECEIVE_BIAS;
               s_axis_tready <= 1'b1;
+              f_bram_en <= 1'b1;
+              f_we <= 1'b1;
             end
           end
           else begin
             state <= STATE_RECEIVE_FEATURE;
             s_axis_tready <= 1'b1;
+            f_bram_en <= 1'b1;
+            f_we <= 1'b1;
           end
         end
         STATE_RECEIVE_FEATURE: begin
@@ -587,15 +606,49 @@ module conv_module
             state <= STATE_IDLE;
             f_receive_done <= 1'b0;
           end
+          else begin
+            if (S_AXIS_TVALID) begin
+              if ((cnt_col == (flen>>2)-1) && (cnt_row == flen-1) && (cnt_ch == num_inch-1)) begin
+                s_axis_tready <= 1'b0;
+                f_bram_en <= 1'b0;
+                f_we <= 1'b0;
+                f_receive_done <= 1'b1;
+              end
+            end
+          end
         end
+
         STATE_RECEIVE_BIAS: begin
           if (b_receive_done) begin
             state <= STATE_RECEIVE_WEIGHT;
+            s_axis_tready <= 1'b0;
+            w_bram_en <= 1'b1;
+            w_we <= 1'b1;
             b_receive_done <= 1'b0;
+          end
+          else begin
+            if (S_AXIS_TVALID) begin
+              if (cnt_ch == (num_outch>>2)-1) begin
+                s_axis_tready <= 1'b0;
+                f_bram_en <= 1'b0;
+                f_we <= 1'b0;
+                b_receive_done <= 1'b1;
+              end
+            end
           end
         end
         STATE_RECEIVE_WEIGHT: begin
-          
+          if (S_AXIS_TVALID) begin
+            if (cnt_filter[3]) begin // 4개의 filter 받을 때 마다
+              cnt_filter <= 3'b0;
+              if (cnt_ch == (num_inch>>2)-1) begin
+                state <= STATE_COMPUTE;
+                s_axis_tready <= 1'b0;
+                w_bram_en <= 1'b0;
+                w_we <= 1'b0;
+              end
+            end
+          end
         end
         STATE_READ_BIAS: begin
           
@@ -645,6 +698,7 @@ module conv_module
   always @(posedge clk) begin
     if (!rstn) begin
       f_addr <= 12'h000;
+      b_addr <= 7'h00;
       w_addr <= 10'h000;
       r_addr <= 11'h000;
       read_delay <= 2'b0;
@@ -652,6 +706,10 @@ module conv_module
       cnt_18 <= 5'h00;
       cnt_1024 <= 11'h000;
       cnt_32 <= 6'b0;
+      cnt_row <= 6'b0;
+      cnt_col <= 6'b0;
+      cnt_ch <= 7'b0;
+      cnt_filter <= 3'b0;
       partial_result <= 32'h00000000;
       feat_3[0] <= 272'h0;
       feat_3[1] <= 272'h0;
@@ -669,14 +727,62 @@ module conv_module
             num_outch <= num_OUTCH;
           end
         end
-        STATE_RECEIVE_FEATURE: begin          
-          
+        STATE_RECEIVE_FEATURE: begin
+          if (S_AXIS_TVALID) begin
+            if (cnt_col == (flen>>2)-1) begin
+              cnt_col <= 6'b0;
+              if (cnt_row == flen-1) begin
+                cnt_row <= 6'b0;
+                if (cnt_ch == num_inch-1) begin
+                  f_addr <= 12'b0;
+                  cnt_ch <= 7'b0;
+                end
+                else begin
+                  f_addr <= next_faddr[11:0];
+                  cnt_ch <= cnt_ch + 1;
+                end
+              end
+              else begin
+                f_addr <= next_faddr[11:0];
+                cnt_row <= cnt_row + 1;
+              end
+            end
+            else begin
+              f_addr <= next_faddr[11:0];
+              cnt_col <= cnt_col + 1;
+            end
         end
+          end
         STATE_RECEIVE_BIAS: begin
-          
+          if (S_AXIS_TVALID) begin
+            if (cnt_ch == (num_outch>>2)-1) begin
+              b_addr <= 7'b0;
+              cnt_ch <= 7'b0;
+            end
+            else begin
+              b_addr <= next_baddr[7:0];
+              cnt_ch <= cnt_ch + 1;
+            end
+          end
         end
         STATE_RECEIVE_WEIGHT: begin
-          
+          if (S_AXIS_TVALID) begin
+            if (cnt_filter[3]) begin // 4개의 filter 받을 때 마다
+              cnt_filter <= 3'b0;
+              if (cnt_ch == (num_inch>>2)-1) begin
+                w_addr <= 10'b0;
+                cnt_ch <= 7'b0;
+              end
+              else begin
+                w_addr <= next_waddr[9:0];
+                cnt_ch <= cnt_ch + 1;
+              end
+            end
+            else begin
+              w_addr <= next_waddr[9:0];
+              cnt_filter <= cnt_filter + 1;
+            end
+          end
         end
         STATE_READ_BIAS: begin
           
