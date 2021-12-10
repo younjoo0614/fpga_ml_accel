@@ -784,37 +784,20 @@ module conv_module
           if (send_done) begin
             state <= STATE_IDLE;
           end
-          else if (cnt_output == flen * flen >> 2) begin            
+          else if (cnt_output == flen * flen >> 2) begin //weight 직육면체 하나에 대해서 계산 끝났을 때           
             if (outch_cnt == num_OUTCH) begin
               outch_cnt <= 9'd0;    
               send_done <= 1'b1;     
               m_axis_tvalid <= 1'b0;      
             end
-            else begin
-              if (num_INCH[1]&& num_INCH[0]) begin
-                m_axis_tvalid <= 1'b0;
-                cnt_output <= 9'h0;
-                if (!outch_cnt[1] && !outch_cnt[0]) begin
-                  state <= STATE_RECEIVE_WEIGHT;
-                  w_addr <= 12'h000;
-                  w_bram_en <= 1'b1;
-                  w_we <= 1'b1;
-                  s_axis_tready <= 1'b1;
-                end
-                else begin 
-                  state <= STATE_READ_FEAT;
-                  f_bram_en <= 1'b1;
-                end
-              end
-              else begin
-                m_axis_tvalid <= 1'b0;
-                cnt_output <= 9'h0;                                 
-                state <= STATE_RECEIVE_WEIGHT;
-                w_addr <= 12'h000;
-                w_bram_en <= 1'b1;
-                w_we <= 1'b1;
-                s_axis_tready <= 1'b1;                  
-              end
+            else begin              
+              m_axis_tvalid <= 1'b0;
+              cnt_output <= 9'h0;                                 
+              state <= STATE_RECEIVE_WEIGHT;
+              w_addr <= 12'h000;
+              w_bram_en <= 1'b1;
+              w_we <= 1'b1;
+              s_axis_tready <= 1'b1;   
             end
           end
           else begin
@@ -992,7 +975,7 @@ module conv_module
                 else if (flen[4]) feat_3[2][271:128] <= {8'h00,feat_temp,8'h00};
                 else if (flen[3]) feat_3[2][271:192] <={8'h00,feat_temp,8'h00};
                 else feat_3[2][271:224] <= {8'h00,feat_temp,8'h00};
-                go_read_weight <= 1'b1;
+                if (!inch_cnt[1] && !inch_cnt[0]) go_read_weight <= 1'b1; //0일 때 처음 들어오고 4번에 한 번씩 읽어야 하니까
                 cnt_height <= 5'h0;
               end
               else begin //두 번째 줄 읽을 때
