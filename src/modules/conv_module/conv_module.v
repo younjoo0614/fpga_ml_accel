@@ -350,6 +350,32 @@ module pe (
   end
 endmodule
 
+module CLA_16Bit (
+  input [15:0] A, 
+  input [15:0] B, 
+  input   C_in,     // if 0 --> add, 1 --> sub
+
+  output [15:0] S,
+  output  C_out
+);
+  wire [3:0] C_out_LCU;   // carry
+  wire [3:0] P;
+  wire [3:0] G;
+
+  wire [15:0] A_1; 
+
+  assign A_1 = C_in ? ~A : A;
+  assign C_out = C_in ? ~C_out_LCU[3] : C_out_LCU[3];
+
+  CLG4 clg4(.C_in(C_in), .p(P), .g(G), .C_out(C_out_LCU));
+  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
+  CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(C_out_LCU[2]), .p_g(P[2]), .g_g(G[2]), .of());
+  CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(C_out_LCU[3]), .p_g(P[3]), .g_g(G[3]), .of());
+endmodule
+
+
+
 module conv_module 
   #(
     parameter integer C_S00_AXIS_TDATA_WIDTH = 32
@@ -387,15 +413,17 @@ module conv_module
     output wire SEND_DONE
   );
   localparam STATE_IDLE = 4'd0,
-  STATE_RECEIVE_FEATURE = 4'd1,
+  STATE_RECEIVE_FEATURE = 4'd1,  //BRAM 으로 receive
   STATE_RECEIVE_BIAS = 4'd2,
   STATE_RECEIVE_WEIGHT = 4'd3,
-  STATE_READ_BIAS = 4'd4,
+  STATE_READ_BIAS = 4'd4,  //BRAM에서 read  
   STATE_COMPUTE = 4'd5,
-  STATE_PSUM = 4'd6,
+  STATE_READ_FEAT = 4'd6,
+  STATE_READ_WEIGHT =4'd11,
   STATE_ADD_BIAS = 4'd7,
   STATE_WRITE_RESULT = 4'd8,
-  STATE_SEND_RESULT = 4'd9;
+  STATE_SEND_RESULT = 4'd9,
+  STATE_WRITE_RBRAM = 4'd10;
   
   reg                                           m_axis_tuser;
   reg [C_S00_AXIS_TDATA_WIDTH-1 : 0]            m_axis_tdata;
@@ -416,17 +444,121 @@ module conv_module
   // TODO : Write your code here
   ////////////////////////////////////////////////////////////////////////////
   reg [3:0] state;
-  reg f_receive_done, b_receive_done, w_receive_done, send_done, calc_done;
+  reg f_receive_done, b_receive_done, w_receive_done, send_done, calc_all_done;
+  reg pe_en, first;
+  reg [11:0] f_addr;
+  reg [9:0] w_addr; 
+  reg [10:0] r_addr;
+  wire [15:0] next_faddr, next_waddr, next_raddr;
+  wire [31:0] din, f_dout, w_dout, r_din;
+  reg f_bram_en, w_bram_en, r_bram_en, f_we, w_we, r_we;
+  wire [7:0] p1_a, p1_b;
+  reg [1:0] read_delay;
+  reg [31:0] partial_result;
+  reg [271:0] feat_3[2:0];
+  reg [5:0] flen;
+  reg [8:0] num_inch, num_outch;
+  reg [71:0] feat;
+  reg [255:0] feat_temp;
+  reg [71:0] weight;
+  reg [27:0] pe_result_temp;
+  reg [1:0] cnt_3;
+  reg [3:0] cnt_9;
+  reg [4:0] cnt_18;
+  reg [5:0] cnt_32,cnt_width, cnt_height;
+  reg [10:0] cnt_1024;
+  reg [8:0] outch_cnt_256, in_ch_cnt;
+  reg go_read_weight, go_compute;
 
   assign F_writedone = f_receive_done;
   assign B_writedone = b_receive_done;
   assign W_writedone = w_receive_done;
-  assign RDY_TO_SEND = calc_done;
+  assign RDY_TO_SEND = calc_all_done;
   assign SEND_DONE = send_done;
+  assign din = S_AXIS_TDATA;
+  assign r_din = partial_result;
+  assign p1_a = feat[71:63];
+  assign p1_b = weight[71:63];
 
+  sram_32x3200 feat_sram_32x3200(
+  .addra(f_addr[10:0]),
+  .clka(clk),
+  .dina(din),
+  .douta(f_dout),
+  .ena(f_bram_en),
+  .wea(f_we)
+  );
+
+  sram_32x1024 weight_sram_32x1024(
+  .addra(w_addr[9:0]),
+  .clka(clk),
+  .dina(din),
+  .douta(w_dout),
+  .ena(w_bram_en),
+  .wea(w_we)
+  );  
+
+  sram_32x1024 result_sram_32x1024 (
+    .addra(w_addr[9:0]),
+    .clka(clk),
+    .dina(din),
+    .douta(w_dout),
+    .ena(w_bram_en),
+    .wea(w_we)
+  );
+
+  pe pe1 (
+    .clk(clk),
+    .en(pe_en),
+    .A(p1_a),
+    .B(p1_b),
+    .out_a(),
+    .out_b(),
+    .result(pe_result_temp),
+    .first(first),
+    .of()
+  );
+
+  CLA_16Bit faddr_adder (
+    .A({5'h00,f_addr[10:0]}),
+    .B(16'h0001),
+    .C_in(1'b0),
+    .S(next_faddr),
+    .C_out()
+  );
+
+  CLA_16Bit w1addr_adder (
+    .A({6'h00,w_addr[8:0]}),
+    .B(16'h0001),
+    .C_in(1'b0),
+    .S(next_waddr),
+    .C_out()
+  );
+  CLA_16Bit w2addr_adder (
+    .A({6'h00, r_addr[9:0]}),
+    .B(16'h0001),
+    .C_in(1'b0),
+    .S(next_raddr),
+    .C_out()
+  );
+
+  //control path
   always @(posedge clk) begin
     if (!rstn) begin
       state <= STATE_IDLE;
+      f_receive_done <= 1'b0;
+      b_receive_done <= 1'b0;
+      w_receive_done <= 1'b0;
+      send_done <= 1'b0;
+      calc_all_done <= 1'b0;
+      pe_en <= 1'b0;
+      first <= 1'b0;
+      f_bram_en <= 1'b0;
+      w_bram_en <= 1'b0;
+      r_bram_en <= 1'b0;
+      f_we <= 1'b0;
+      w_we <= 1'b0;
+      r_we <= 1'b0;
     end
     else begin
       case (state)
@@ -436,24 +568,30 @@ module conv_module
           end
           else if (command[1]) begin
             if (command[0]) begin
-              state <= STATE_COMPUTE;
+              state <= STATE_READ_FEAT;
+              f_bram_en <= 1'b1;
+              w_bram_en <= 1'b1;
             end
             else begin
               state <= STATE_RECEIVE_BIAS;
+              s_axis_tready <= 1'b1;
             end
           end
           else begin
             state <= STATE_RECEIVE_FEATURE;
+            s_axis_tready <= 1'b1;
           end
         end
         STATE_RECEIVE_FEATURE: begin
           if (f_receive_done) begin
             state <= STATE_IDLE;
+            f_receive_done <= 1'b0;
           end
         end
         STATE_RECEIVE_BIAS: begin
           if (b_receive_done) begin
             state <= STATE_RECEIVE_WEIGHT;
+            b_receive_done <= 1'b0;
           end
         end
         STATE_RECEIVE_WEIGHT: begin
@@ -463,16 +601,39 @@ module conv_module
           
         end
         STATE_COMPUTE: begin
-          if (calc_done) begin //ready_to_send 와 calc_done은 역할이 같음
+          if (calc_all_done) begin //완전히 모든 계산이 끝났을 때 calc_done은 역할이 같음
             state <= STATE_IDLE;
+            pe_en <= 1'b0;
+            calc_all_done <= 1'b0;
+          end
+          if (cnt_height == flen) begin
+            state <= STATE_READ_FEAT;
+            f_bram_en <= 1'b1;
           end
         end
-        STATE_PSUM: begin
+        STATE_READ_FEAT: begin
+          if (cnt_height == flen) begin
+            state <= STATE_READ_WEIGHT;
+            go_read_weight <= 1'b0;
+            w_bram_en <= 1'b1;
+            f_bram_en <= 1'b0;
+          end
+          
+        end
+        STATE_READ_WEIGHT: begin
+          if (go_compute) begin
+            state <= STATE_COMPUTE;
+            w_bram_en <= 1'b0;
+            pe_en <= 1'b1;
+          end
+        end
+        STATE_WRITE_RBRAM: begin
           
         end
         STATE_SEND_RESULT: begin
           if (send_done) begin
             state <= STATE_IDLE;
+            m_axis_tvalid <= 1'b0;
           end
         end
       endcase
@@ -480,18 +641,35 @@ module conv_module
   end
 
 
-  
   // data path
   always @(posedge clk) begin
     if (!rstn) begin
+      f_addr <= 12'h000;
+      w_addr <= 10'h000;
+      r_addr <= 11'h000;
+      read_delay <= 2'b0;
+      cnt_9 <= 4'h0;
+      cnt_18 <= 5'h00;
+      cnt_1024 <= 11'h000;
+      cnt_32 <= 6'b0;
+      partial_result <= 32'h00000000;
+      feat_3[0] <= 272'h0;
+      feat_3[1] <= 272'h0;
+      feat_3[2] <= 272'h0;
+      feat <= 72'h0;
+      weight <= 72'h0;
+      pe_result_temp <= 28'h0;
     end
     else begin
       case (state)
         STATE_IDLE: begin
-          
+          if (command==3'b001) begin
+            flen <= Flen;
+            num_inch <= num_INCH;
+            num_outch <= num_OUTCH;
+          end
         end
-        STATE_RECEIVE_FEATURE: begin
-          
+        STATE_RECEIVE_FEATURE: begin          
           
         end
         STATE_RECEIVE_BIAS: begin
@@ -504,12 +682,109 @@ module conv_module
           
         end
         STATE_COMPUTE: begin
-          
+          if (cnt_width == flen) begin
+            
+          end
         end
-        STATE_PSUM: begin
-          
+        STATE_READ_FEAT: begin
+          if (~|cnt_32) begin  // 첫 번째 줄 읽을 때 
+            feat_3[0] <= 272'h0;
+            if (cnt_9 == flen>>2) begin 
+              cnt_9 <= 4'h0;
+              if (cnt_3[0]) begin //세 번째 줄 읽을 때
+                cnt_3 <= 2'b00;                
+                if (flen[5]) feat_3[2] <= {8'h00,feat_temp,8'h00};
+                else if (flen[4]) feat_3[2][271:128] <= {8'h00,feat_temp,8'h00};
+                else if (flen[3]) feat_3[2][271:192] <={8'h00,feat_temp,8'h00};
+                else feat_3[2][271:224] <= {8'h00,feat_temp,8'h00};
+                go_read_weight <= 1'b1;
+              end
+              else begin //두 번째 줄 읽을 때
+                cnt_3 <= 2'b01;
+                if (flen[5]) feat_3[1] <= {8'h00,feat_temp,8'h00};
+                else if (flen[4]) feat_3[1][271:128] <= {8'h00,feat_temp,8'h00};
+                else if (flen[3]) feat_3[1][271:192] <={8'h00,feat_temp,8'h00};
+                else feat_3[1][271:224] <= {8'h00,feat_temp,8'h00};
+              end
+            end
+            else begin              
+              if (read_delay[1]) begin
+                feat_temp[31:0] <= {f_dout[7:0], f_dout[15:8], f_dout[23:16], f_dout[31:24]};
+                cnt_9 <= cnt_9 + 1;
+                read_delay <= 2'b00;
+                f_addr <= next_faddr[10:0];
+              end
+              else begin 
+                read_delay <= read_delay +1;
+                if (read_delay[0])begin
+                  feat_temp <= feat_temp << 32;
+                end
+              end
+            end
+          end
+          else if (&cnt_32) begin //마지막 줄 읽을 때 
+            feat_3[0] <= feat_3[1];
+            feat_3[1] <= feat_3[2];
+            feat_3[2] <= 272'h0;            
+          end
+          else begin  //마지막도 아니고 첫 번째도 아닌 줄
+            if (cnt_9 == flen>>2) begin 
+              cnt_9 <= 4'h0;
+              feat_3[0] <= feat_3[1];
+              feat_3[1] <= feat_3[2];
+              if (flen[5]) feat_3[1] <= {8'h00,feat_temp,8'h00};
+              else if (flen[4]) feat_3[2][271:128] <= {8'h00,feat_temp,8'h00};
+              else if (flen[3]) feat_3[2][271:192] <={8'h00,feat_temp,8'h00};
+              else feat_3[2][271:224] <= {8'h00,feat_temp,8'h00};
+            end
+            else begin              
+              if (read_delay[1]) begin
+                feat_temp[31:0] <= {f_dout[7:0], f_dout[15:8], f_dout[23:16], f_dout[31:24]};
+                cnt_9 <= cnt_9 + 1;
+                read_delay <= 2'b00;
+                f_addr <= next_faddr[10:0];
+              end
+              else begin
+                read_delay <= read_delay +1;
+                if (read_delay[0])begin
+                  feat_temp <= feat_temp << 32;
+                end
+              end
+            end
+          end
         end
-        STATE_WRITE_RESULT: begin
+        STATE_READ_WEIGHT: begin
+          if (cnt_3[1] && cnt_3[0]) begin
+            go_compute <= 1'b1;           
+          end
+          else if (cnt_3[1]) begin
+            if (read_delay[1]) begin
+              w_addr <= next_waddr;
+              weight[7:0] <= w_dout[7:0];
+              read_delay <= 2'b00;
+            end
+            else read_delay <= read_delay +1;
+          end
+          else if (cnt_3[0]) begin
+            if (read_delay[1]) begin
+              w_addr <= next_waddr;
+              weight[7:0] <= w_dout[7:0];
+              read_delay <= 2'b00;
+              weight[39:8] <= {w_dout[7:0],w_dout[15:8], w_dout[23:16], w_dout[31:24]};
+            end
+            else read_delay <= read_delay +1;
+          end
+          else begin
+            if (read_delay[1]) begin
+              w_addr <= next_waddr;
+              weight[7:0] <= w_dout[7:0];
+              read_delay <= 2'b00;
+              weight[71:40] <= {w_dout[7:0],w_dout[15:8], w_dout[23:16], w_dout[31:24]};
+            end
+            else read_delay <= read_delay +1;
+          end
+        end
+        STATE_WRITE_RBRAM: begin
           
         end
         STATE_SEND_RESULT: begin
