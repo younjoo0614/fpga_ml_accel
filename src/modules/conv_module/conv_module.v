@@ -655,12 +655,21 @@ module conv_module
           
         end
         STATE_COMPUTE: begin
-          if (calc_all_done) begin //완전히 모든 계산이 끝났을 때 calc_done은 역할이 같음
-            state <= STATE_IDLE;
-            pe_en <= 1'b0;
-            calc_all_done <= 1'b0;
+          if (cnt_width == flen) begin
+            cnt_width <= 5'd0;
+            cnt_height <= cnt_height + 1;
+            if (cnt_height == flen) begin
+              inch_cnt <= inch_cnt + 1;
+              cnt_height <= 5'd10;
+              if (inch_cnt == num_INCH) begin
+                outch_cnt <= outch_cnt + 1;
+                inch_cnt <= 9'd0;
+                if (outch_cnt == num_OUTCH) begin
+                  outch_cnt <= 9'd0;
+                end
+              end
+            end
           end
-          
         end
         STATE_READ_FEAT: begin
           if (go_read_weight) begin
@@ -671,14 +680,12 @@ module conv_module
           end
           else begin
             state <= STATE_COMPUTE;
-            pe_en <= 1'b1;
           end
         end
         STATE_READ_WEIGHT: begin
           if (go_compute) begin
             state <= STATE_COMPUTE;
             w_bram_en <= 1'b0;
-            pe_en <= 1'b1;
           end
         end
         STATE_WRITE_RBRAM: begin
@@ -789,17 +796,30 @@ module conv_module
           end
         end
         STATE_READ_BIAS: begin
-          
-        end
-        STATE_COMPUTE: begin
-          if (cnt_width == flen) begin
+          if (cnt_18 == 5'd17) begin
             
           end
           else begin
-            cnt_width <= cnt_width + 1;
-            // feat <= {feat_3[0][271-cnt_width*8-:24], feat_3[1][271-cnt_width*8-:24], feat_3[2][271-cnt_width*8-:24]};
-            // weight_9 <= weight;
-            
+            feat <= feat << 8;
+
+          end
+        end
+        STATE_COMPUTE: begin
+          if (cnt_18 == 5'd0) begin
+            feat <= {feat_3[0][271 - cnt_width*8 -:24],feat_3[0][271 - cnt_width*8 -:24],feat_3[0][271 - cnt_width*8 -:24]};
+            if (inch_cnt[1] && inch_cnt[0]) weight <= weight_36[287:216];
+            else if (inch_cnt[1]) weight <= weight_36[215:144];
+            else if (inch_cnt[0]) weight <= weight_36[143:72];
+            else weight <= weight_36[71:0];
+            cnt_18 <= cnt_18 + 1;
+          end
+          else if (cnt_18[5] && cnt_18[1]) begin
+            cnt_width <= cnt_width;
+          end
+          else  begin
+            cnt_18 <= cnt_18 + 1;
+            feat <= feat << 8;
+            weight <= feat << 8;
           end
         end
         STATE_READ_FEAT: begin
@@ -816,13 +836,14 @@ module conv_module
                 go_read_weight <= 1'b1;
                 cnt_height <= 5'h0;
               end
-              else begin //두 번째 줄 읽을 때
+              else  begin //두 번째 줄 읽을 때
                 cnt_3 <= 2'b01;
                 if (flen[5]) feat_3[1] <= {8'h00,feat_temp,8'h00};
                 else if (flen[4]) feat_3[1][271:128] <= {8'h00,feat_temp,8'h00};
                 else if (flen[3]) feat_3[1][271:192] <={8'h00,feat_temp,8'h00};
                 else feat_3[1][271:224] <= {8'h00,feat_temp,8'h00};
               end
+
             end
             else begin              
               if (read_delay[1]) begin
