@@ -711,10 +711,19 @@ module fc_module
     .comp(max_comp4)
   );
 
+  //for debug
+  reg checkflag;
+  //
 
   // control path
   always @(posedge clk) begin
+    //
+    if(checkflag) checkflag<=1'b0;
+    //
     if (!rstn) begin
+      //
+      checkflag <= 1'b0;
+      //
       state <= STATE_IDLE;
       f_we <= 1'b0;
       w1_we <= 1'b0;
@@ -735,6 +744,7 @@ module fc_module
     else begin
       case (state)
         STATE_IDLE: begin
+          m_axis_tvalid <= 1'b0;
           fc_done <= 1'b0;
           if (fc_start) begin
             if (command[0] && !f_receive_done) begin
@@ -770,7 +780,15 @@ module fc_module
         end
         STATE_RECEIVE_BIAS: begin
           if(S_AXIS_TVALID) begin
-            if (next_cnt[10:0] == bias_size>>2) begin            
+            if (~|bias_size[1:0]) begin
+              if (next_cnt[10:0] == bias_size>>2) begin            
+                state <= STATE_IDLE;
+                s_axis_tready <= 1'b0;
+                f_bram_en <= 1'b0;
+                f_we <= 1'b0;
+              end
+            end
+            else if (next_cnt[10:0] == (bias_size>>2) + 1) begin
               state <= STATE_IDLE;
               s_axis_tready <= 1'b0;
               f_bram_en <= 1'b0;
@@ -953,8 +971,8 @@ module fc_module
               end
             end            
           end
-          else if (delay[0]) begin
-            m_axis_tvalid <= 1'b1;           
+          else if (delay[0]) begin  
+            m_axis_tvalid <= 1'b1;         
             if (b_addr[8:0]==bias_size>>2) begin
               m_axis_tlast <= 1'b1;
               fc_done <= 1'b1;            
@@ -963,8 +981,6 @@ module fc_module
             end
             else if (w4_addr[10]) begin
               state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
-              w1_bram_en <= 1'b1;
-              w1_we <= 1'b1;
               s_axis_tready <= 1'b1;
               delay <= 2'b00;
             end
@@ -982,6 +998,9 @@ module fc_module
             w2_bram_en <= 1'b1;
             w3_bram_en <= 1'b1;
             w4_bram_en <= 1'b1;
+            //
+            checkflag <= 1'b1;
+            //
           end
         end
       endcase
@@ -1084,6 +1103,7 @@ module fc_module
         end
 
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
+          m_axis_tvalid <= 1'b0;
           if (S_AXIS_TVALID) begin
             if (next_cnt[10:0] == feat_size>>2) begin
               receive_cnt <= 10'h000;
