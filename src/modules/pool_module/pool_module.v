@@ -123,8 +123,8 @@ module pool_module
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
-    input wire [5:0] flen,
-    input wire [8:0] inch
+    input wire [5:0] Flen,
+    input wire [8:0] num_INCH
   );
 
   localparam STATE_IDLE = 3'd0,  
@@ -175,7 +175,7 @@ module pool_module
   );
   
 
-  always @ (posedge clk ) begin
+  always @ (posedge clk) begin
     if (!rstn) begin
       state <= STATE_IDLE;
       addr <= 17'b0;
@@ -192,110 +192,112 @@ module pool_module
           m_axis_tvalid <= 1'b0;
           m_axis_tlast <= 1'b0;
           if (pool_start) begin
-            flen_reg <= flen;
-            inch_reg <= inch;
-            state<= STATE_RECEIVE_DATA;
+            flen_reg <= Flen;
+            inch_reg <= num_INCH;
+            state <= STATE_RECEIVE_DATA;
             s_axis_tready <= 1'b1;
           end
         end
 
-        STATE_RECEIVE_DATA: begin     
-          m_axis_tvalid <= 1'b0;     
+        STATE_RECEIVE_DATA: begin
+          m_axis_tvalid <= 1'b0;
           
-          if (addr[6] && flen_reg [5]) begin
+          if (addr[6] && flen_reg[5]) begin
             state <= STATE_POOL;
             addr <= 7'h00;
             s_axis_tready <= 1'b0; 
           end
-          else if (addr[5] && flen_reg [4]) begin
+          else if (addr[5] && flen_reg[4]) begin
             state <= STATE_POOL;
             addr <= 7'h00;
             s_axis_tready <= 1'b0; 
           end
-          else if (addr[4] && flen_reg [3]) begin
+          else if (addr[4] && flen_reg[3]) begin
             state <= STATE_POOL;
             addr <= 7'h00;
             s_axis_tready <= 1'b0; 
           end
-          else if (addr[3] && flen_reg [2]) begin
+          else if (addr[3] && flen_reg[2]) begin
             state <= STATE_POOL;
             addr <= 7'h00;
             s_axis_tready <= 1'b0; 
           end
-          else begin  
-            if (s_axis_tready) begin
-              addr <= addr + 4;
-              feat[addr+3] <= S_AXIS_TDATA[31:24];
-              feat[addr+2] <= S_AXIS_TDATA[23:16];
-              feat[addr+1] <= S_AXIS_TDATA[15:8];
-              feat[addr] <= S_AXIS_TDATA[7:0];
-              if (S_AXIS_TLAST) receive_done <= 1'b1;    
-              s_axis_tready <= 1'b0;   
-            end 
-            else begin
-              s_axis_tready <= 1'b1;
-            end          
+          else if (s_axis_tready && S_AXIS_TVALID) begin
+            addr <= addr + 4;
+            feat[addr+3] <= S_AXIS_TDATA[31:24];
+            feat[addr+2] <= S_AXIS_TDATA[23:16];
+            feat[addr+1] <= S_AXIS_TDATA[15:8];
+            feat[addr] <= S_AXIS_TDATA[7:0];
+            if (S_AXIS_TLAST) receive_done <= 1'b1;    
+            s_axis_tready <= 1'b0;
+          end
+          else begin
+            s_axis_tready <= 1'b1;
           end          
         end
 
         STATE_POOL: begin  
-          s_axis_tready <= 1'b0; 
-          m_axis_tvalid <= 1'b0;                 
+          s_axis_tready <= 1'b0;
+          m_axis_tvalid <= 1'b0;
           delay <= delay + 1;
-          if (delay== 2'b00) begin
-            input_a <= feat[idx_16];
-            input_b <= feat[idx_16 + 1];
-          end
-          else if (delay == 2'b01) begin
-            input_a <= (input_b > input_a) ? input_b:input_a;
-            if (flen_reg[2]) input_b <= feat[idx_16 + 6'd4];
-            else if (flen_reg[3]) input_b <= feat[idx_16 + 6'd8];
-            else if (flen_reg[4]) input_b <= feat[idx_16 + 6'd16];
-            else input_b <= feat[idx_16 + 6'd32];              
-          end
-          else if (delay == 2'b10) begin             
-            input_a <= (input_b > input_a) ? input_b:input_a;
-            if (flen_reg[3]) input_b <= feat[idx_16 + 6'd9];
-            else if (flen_reg[4]) input_b <= feat[idx_16 + 6'd17];
-            else if (flen_reg[2]) input_b <= feat[idx_16 + 6'd5];
-            else input_b <= feat[idx_16 + 6'd33];
-          end
-          else begin
-            max <= (input_b > input_a) ? input_b:input_a;
-            state <= STATE_ACCUM;
-            delay <= 2'b0;
-          end
+          case (delay)
+            2'b00: begin
+              input_a <= feat[idx_16];
+              input_b <= feat[idx_16 + 1];
+            end
+            2'b01: begin
+              input_a <= (input_b > input_a) ? input_b : input_a;
+              if (flen_reg[2]) input_b <= feat[idx_16 + 6'd4];
+              else if (flen_reg[3]) input_b <= feat[idx_16 + 6'd8];
+              else if (flen_reg[4]) input_b <= feat[idx_16 + 6'd16];
+              else input_b <= feat[idx_16 + 6'd32];
+            end
+            2'b10: begin
+              input_a <= (input_b > input_a) ? input_b : input_a;
+              if (flen_reg[3]) input_b <= feat[idx_16 + 6'd9];
+              else if (flen_reg[4]) input_b <= feat[idx_16 + 6'd17];
+              else if (flen_reg[2]) input_b <= feat[idx_16 + 6'd5];
+              else input_b <= feat[idx_16 + 6'd33];
+            end
+            default: begin
+              max <= (input_b > input_a) ? input_b : input_a;
+              state <= STATE_ACCUM;
+              delay <= 2'b0;
+            end
+          endcase
         end
 
-        STATE_ACCUM: begin          
-          cnt_4 <= cnt_4 +1;
-          if (cnt_4 == 3'b000) begin
-            tdata[7:0] <= max;            
-            state <= STATE_POOL;
-            idx_16 <= idx_16 + 2;
-          end
-          else if (cnt_4 == 3'b001) begin
-            tdata[15:8] <= max;
-            if (flen_reg[2]) begin
-              state <= STATE_RECEIVE_DATA;              
-              idx_16 <= 6'b000000;
-            end
-            else begin
+        STATE_ACCUM: begin
+          cnt_4 <= cnt_4 + 1;
+          case (cnt_4)
+            3'b000: begin
+              tdata[7:0] <= max;
               state <= STATE_POOL;
               idx_16 <= idx_16 + 2;
-            end 
-          end
-          else if (cnt_4 == 3'b010) begin
-            tdata[23:16] <= max;          
-            state <= STATE_POOL;
-            idx_16 <= idx_16 + 2;
-          end
-          else begin
-            state <= STATE_DATA_SEND;
-            tdata[31:24] <= max;
-            cnt_4 <= 3'b000;
-            idx_16 <= idx_16 + 2;
-          end          
+            end
+            3'b001: begin
+              tdata[15:8] <= max;
+              if (flen_reg[2]) begin
+                state <= STATE_RECEIVE_DATA;
+                idx_16 <= 6'b000000;
+              end
+              else begin
+                state <= STATE_POOL;
+                idx_16 <= idx_16 + 2;
+              end
+            end
+            3'b010: begin
+              tdata[23:16] <= max;
+              state <= STATE_POOL;
+              idx_16 <= idx_16 + 2;
+            end
+            default: begin
+              state <= STATE_DATA_SEND;
+              tdata[31:24] <= max;
+              cnt_4 <= 3'b000;
+              idx_16 <= idx_16 + 2;
+            end
+          endcase
         end
 
         STATE_DATA_SEND: begin
@@ -309,9 +311,9 @@ module pool_module
               state <= STATE_IDLE;
             end
             else begin
-              state <= STATE_RECEIVE_DATA;              
+              state <= STATE_RECEIVE_DATA;
               idx_16 <= 6'b000000;
-            end            
+            end
           end
           else if (flen_reg[4] && idx_16[4]) begin
             if (receive_done) begin
@@ -321,7 +323,6 @@ module pool_module
             end
             else begin
               state <= STATE_RECEIVE_DATA;
-              
               idx_16 <= 6'b000000;
             end
           end           
@@ -333,7 +334,6 @@ module pool_module
             end
             else begin
               state <= STATE_RECEIVE_DATA;
-              
               idx_16 <= 6'b000000;
             end
           end   
@@ -344,16 +344,16 @@ module pool_module
               state <= STATE_IDLE;
             end
             else begin
-              state <= STATE_RECEIVE_DATA;              
+              state <= STATE_RECEIVE_DATA;
               idx_16 <= 6'b000000;
             end
           end   
           else begin
             state <= STATE_POOL;
-          end          
-        end        
+          end
+        end
       endcase
     end
   end
-  
+
 endmodule
