@@ -1045,7 +1045,7 @@ module fc_module
       f_receive_done <= 1'b0;
       b_receive_done <= 1'b0;
       w_receive_done <= 1'b0;
-      max_idx <= 4'd10;
+      max_idx <= 4'd0;
       max_value <= 8'h80;
       pe_delay <= 4'h0;
       feat <= 32'h00000000;
@@ -1300,30 +1300,31 @@ module fc_module
         end
         STATE_SEND_RESULT: begin
           //m_axis_tdata <= tdata;
+          //max_index 가 0~9가 아닌 1~10을 출력해야함
           delay <= delay + 1;
           if (bias_size[3:0] == 4'd10) begin
             case (delay)
               2'b00: begin
                 if (!max_comp1) begin
-                  max_idx <= 4*(b_addr[1:0]-1);
+                  max_idx <= 4*(b_addr[1:0]-1)+1;
                   max_value <= tdata[7:0];
                 end
               end
               2'b01: begin
                 if (!max_comp2) begin
-                  max_idx <= 4*(b_addr[1:0]-1)+1;
+                  max_idx <= 4*(b_addr[1:0]-1)+2;
                   max_value <= tdata[15:8];
                 end
               end
               2'b10: begin
                 if (!max_comp3) begin
-                  max_idx <= 4*(b_addr[1:0]-1)+2;
+                  max_idx <= 4*(b_addr[1:0]-1)+3;
                   max_value <= tdata[23:16];
                 end
               end
               2'b11: begin
                 if (!max_comp4) begin
-                  max_idx <= 4*(b_addr[1:0]-1)+3;
+                  max_idx <= 4*(b_addr[1:0]-1)+4;
                   max_value <= tdata[31:24];
                 end
               end
