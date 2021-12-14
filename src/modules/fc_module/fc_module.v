@@ -711,19 +711,9 @@ module fc_module
     .comp(max_comp4)
   );
 
-  //for debug
-  // reg checkflag;
-  //
-
   // control path
   always @(posedge clk) begin
-    //
-    // if (checkflag) checkflag <= 1'b0;
-    //
     if (!rstn) begin
-      //
-      // checkflag <= 1'b0;
-      //
       state <= STATE_IDLE;
       f_we <= 1'b0;
       w1_we <= 1'b0;
@@ -963,46 +953,65 @@ module fc_module
           if (pe_delay[3]) state <= STATE_WRITE_RESULT;
         end
         STATE_SEND_RESULT: begin        
-          if (bias_size[3:0] == 4'd10) begin
-            if (delay[1] && delay[0] ) begin
-              m_axis_tvalid <= 1'b1;   
+          if (|bias_size[1:0]) begin // tb test 용. 내용 수정 필요
+            if (delay == 2'b10) begin
+              m_axis_tvalid <= 1'b1;         
+              if (b_addr[8:0]==(bias_size>>2) + 1) begin
+                m_axis_tlast <= 1'b1;
+                fc_done <= 1'b1;            
+                state <= STATE_IDLE;
+                delay <= 2'b00;
+              end
+            end
+            else if (delay == 2'b11) begin
+              delay <= 2'b00;
+              state <= STATE_PSUM;  
+              m_axis_tvalid <= 1'b0;
+              pe_1_en <= 1'b0;
+              pe_2_en <= 1'b0;
+              pe_3_en <= 1'b0;
+              pe_4_en <= 1'b0;  
+              f_bram_en <= 1'b1;
+              w1_bram_en <= 1'b1;
+              w2_bram_en <= 1'b1;
+              w3_bram_en <= 1'b1;
+              w4_bram_en <= 1'b1;
+              // if (b_addr[8:0]==(bias_size>>2) + 1) begin
+              //   m_axis_tlast <= 1'b1;
+              //   fc_done <= 1'b1;            
+              //   state <= STATE_IDLE;
+              // end
+            end            
+          end
+          else begin 
+            if (delay[0]) begin
+              m_axis_tvalid <= 1'b1;         
               if (b_addr[8:0]==bias_size>>2) begin
                 m_axis_tlast <= 1'b1;
                 fc_done <= 1'b1;            
                 state <= STATE_IDLE;
+                delay <= 2'b00;
               end
-            end            
-          end
-          else if (delay[0]) begin  
-            m_axis_tvalid <= 1'b1;         
-            if (b_addr[8:0]==bias_size>>2) begin
-              m_axis_tlast <= 1'b1;
-              fc_done <= 1'b1;            
-              state <= STATE_IDLE;
-              delay <= 2'b00;
+              else if (w4_addr[10]) begin
+                state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
+                s_axis_tready <= 1'b1;
+                delay <= 2'b00;
+              end
             end
-            else if (w4_addr[10]) begin
-              state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
-              s_axis_tready <= 1'b1;
+            else if (delay[1]) begin
               delay <= 2'b00;
+              state <= STATE_PSUM;  
+              m_axis_tvalid <= 1'b0;
+              pe_1_en <= 1'b0;
+              pe_2_en <= 1'b0;
+              pe_3_en <= 1'b0;
+              pe_4_en <= 1'b0;  
+              f_bram_en <= 1'b1;
+              w1_bram_en <= 1'b1;
+              w2_bram_en <= 1'b1;
+              w3_bram_en <= 1'b1;
+              w4_bram_en <= 1'b1;
             end
-          end
-          else if (delay[1]) begin
-            delay <= 2'b00;
-            state <= STATE_PSUM;  
-            m_axis_tvalid <= 1'b0;
-            pe_1_en <= 1'b0;
-            pe_2_en <= 1'b0;
-            pe_3_en <= 1'b0;
-            pe_4_en <= 1'b0;  
-            f_bram_en <= 1'b1;
-            w1_bram_en <= 1'b1;
-            w2_bram_en <= 1'b1;
-            w3_bram_en <= 1'b1;
-            w4_bram_en <= 1'b1;
-            //
-            // checkflag <= 1'b1;
-            //
           end
         end
       endcase
@@ -1133,7 +1142,7 @@ module fc_module
               end
               else begin
                 column_cnt <= column_cnt + 1;
-                if(!S_AXIS_TLAST) begin
+                if (!S_AXIS_TLAST) begin
                   case (weight_n)
                     2'b00: begin
                       w1_addr <= next_w1addr[10:0]; 
@@ -1147,14 +1156,13 @@ module fc_module
                       w3_addr <= next_w3addr[10:0];
                       weight_n <= 2'b11;
                     end
-
                     2'b11: begin
                       weight_n <= 2'b00;
                       if(next_w4addr[10])begin
-                        w1_addr<=10'h000;
-                        w2_addr<=10'h000;
-                        w3_addr<=10'h000;
-                        w4_addr<=10'h000;
+                        w1_addr <= 10'h000;
+                        w2_addr <= 10'h000;
+                        w3_addr <= 10'h000;
+                        w4_addr <= 10'h000;
                       end
                       else w4_addr <= next_w4addr[10:0];
                     end
@@ -1194,7 +1202,7 @@ module fc_module
         end
 
         STATE_READ_BIAS: begin 
-          if(!delay[1]) delay <= delay + 1;
+          if (!delay[1]) delay <= delay + 1;
           else begin
             bias <= f_dout;
             b_addr <= next_baddr[10:0];
@@ -1271,7 +1279,7 @@ module fc_module
 
         STATE_ADD_BIAS: begin 
           if (pe_delay[2]) begin // pe_delay = 4,5,6,7
-            if (!pe_delay[0] &&!pe_delay[1]) begin
+            if (!pe_delay[0] && !pe_delay[1]) begin
               pe_result <= pe_result1_temp;
               bias_temp <= {{15{bias[7]}},bias[6:0], {6{1'b0}}};
               pe_delay <= pe_delay + 1;              
@@ -1288,7 +1296,7 @@ module fc_module
               bias_add_result2 <= bias_add_result;
               pe_delay <= pe_delay + 1;
             end
-            else if (pe_delay[0] &&pe_delay[1]) begin
+            else if (pe_delay[0] && pe_delay[1]) begin
               pe_result <= pe_result4_temp;
               bias_temp <= {{15{bias[31]}},bias[30:24], {6{1'b0}}};              
               bias_add_result3 <= bias_add_result;
@@ -1303,21 +1311,33 @@ module fc_module
         end
 
         STATE_WRITE_RESULT: begin
-          tdata[7:0] <= bias_add_result1[27] ? (8'b0000_0000) : 
+          if (|bias_size[1:0]) begin
+            tdata[7:0] <= bias_add_result1[27] ? (8'b0000_0000) : 
                           ((bias_add_result1[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result1[12:6]} : 8'b0111_1111); 
-          tdata[15:8] <= bias_add_result2[27] ? (8'b0000_0000) : 
-                          ((bias_add_result2[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result2[12:6]} : 8'b0111_1111);
-          tdata[23:16] <= bias_add_result3[27] ? (8'b0000_0000) : 
-                          ((bias_add_result3[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result3[12:6]} : 8'b0111_1111);
-          tdata[31:24] <= bias_add_result4[27] ? (8'b0000_0000) : 
-                          ((bias_add_result4[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);
+            tdata[15:8] <= bias_add_result2[27] ? (8'b0000_0000) : 
+                            ((bias_add_result2[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result2[12:6]} : 8'b0111_1111);
+            tdata[23:16] <= bias_add_result3[27] ? (8'b0000_0000) : 
+                            ((bias_add_result3[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result3[12:6]} : 8'b0111_1111);
+            tdata[31:24] <= bias_add_result4[27] ? (8'b0000_0000) : 
+                            ((bias_add_result4[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);
+          end
+          else begin
+            tdata[7:0] <= bias_add_result1[27] ? (8'b0000_0000) : 
+                          ((bias_add_result1[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result1[12:6]} : 8'b0111_1111); 
+            tdata[15:8] <= bias_add_result2[27] ? (8'b0000_0000) : 
+                            ((bias_add_result2[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result2[12:6]} : 8'b0111_1111);
+            tdata[23:16] <= bias_add_result3[27] ? (8'b0000_0000) : 
+                            ((bias_add_result3[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result3[12:6]} : 8'b0111_1111);
+            tdata[31:24] <= bias_add_result4[27] ? (8'b0000_0000) : 
+                            ((bias_add_result4[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);
+          end
           delay <= 2'b00;
         end
         STATE_SEND_RESULT: begin
-          //m_axis_tdata <= tdata;
           //max_index 가 0~9가 아닌 1~10을 출력해야함
           delay <= delay + 1;
-          if (bias_size[3:0] == 4'd10) begin
+          m_axis_tdata <= tdata; // tb test 용.
+          if (|bias_size[1:0]) begin
             case (delay)
               2'b00: begin
                 if (!max_comp1) begin
@@ -1346,7 +1366,7 @@ module fc_module
               default: ;
             endcase
           end
-          else m_axis_tdata <= tdata;
+          // else m_axis_tdata <= tdata;
         end
       endcase
     end
