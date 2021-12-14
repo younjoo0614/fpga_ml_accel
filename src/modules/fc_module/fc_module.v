@@ -712,17 +712,17 @@ module fc_module
   );
 
   //for debug
-  reg checkflag;
+  // reg checkflag;
   //
 
   // control path
   always @(posedge clk) begin
     //
-    if(checkflag) checkflag<=1'b0;
+    // if (checkflag) checkflag <= 1'b0;
     //
     if (!rstn) begin
       //
-      checkflag <= 1'b0;
+      // checkflag <= 1'b0;
       //
       state <= STATE_IDLE;
       f_we <= 1'b0;
@@ -788,11 +788,13 @@ module fc_module
                 f_we <= 1'b0;
               end
             end
-            else if (next_cnt[10:0] == (bias_size>>2) + 1) begin
-              state <= STATE_IDLE;
-              s_axis_tready <= 1'b0;
-              f_bram_en <= 1'b0;
-              f_we <= 1'b0;
+            else begin
+              if (next_cnt[10:0] == (bias_size>>2) + 1) begin
+                state <= STATE_IDLE;
+                s_axis_tready <= 1'b0;
+                f_bram_en <= 1'b0;
+                f_we <= 1'b0;
+              end
             end
           end
         end
@@ -800,7 +802,7 @@ module fc_module
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
           if (S_AXIS_TVALID) begin
             if (next_cnt[10:0] == feat_size>>2) begin
-              if (column_cnt == bias_size -1) begin
+              if (column_cnt == bias_size - 1) begin
                 s_axis_tready <= 1'b0;
                 state <= STATE_PSUM;
                 f_bram_en <= 1'b1;
@@ -999,7 +1001,7 @@ module fc_module
             w3_bram_en <= 1'b1;
             w4_bram_en <= 1'b1;
             //
-            checkflag <= 1'b1;
+            // checkflag <= 1'b1;
             //
           end
         end
@@ -1090,15 +1092,28 @@ module fc_module
         end
         STATE_RECEIVE_BIAS: begin
           if(S_AXIS_TVALID) begin
-            if (next_cnt[10:0] == bias_size>>2) begin
-              b_addr <= 10'h200;
-              receive_cnt <= 10'h000; 
-              b_receive_done <= 1'b1;
+            if (~|bias_size[1:0]) begin
+              if (next_cnt[10:0] == bias_size>>2) begin
+                b_addr <= 10'h200;
+                receive_cnt <= 10'h000; 
+                b_receive_done <= 1'b1;
+              end
+              else begin
+                b_addr <= next_baddr[10:0];
+                receive_cnt <= next_cnt[10:0];
+              end
             end
             else begin
-              b_addr <= next_baddr[10:0];
-              receive_cnt <= next_cnt[10:0];
-            end   
+              if (next_cnt[10:0] == (bias_size>>2) + 1) begin
+                b_addr <= 10'h200;
+                receive_cnt <= 10'h000; 
+                b_receive_done <= 1'b1;
+              end
+              else begin
+                b_addr <= next_baddr[10:0];
+                receive_cnt <= next_cnt[10:0];
+              end
+            end
           end
         end
 
@@ -1107,7 +1122,7 @@ module fc_module
           if (S_AXIS_TVALID) begin
             if (next_cnt[10:0] == feat_size>>2) begin
               receive_cnt <= 10'h000;
-              if (column_cnt == bias_size -1) begin
+              if (column_cnt == bias_size - 1) begin
                 column_cnt <= 10'h000;
                 w_receive_done <= 1'b1;
                 w1_addr <= 10'h000;
