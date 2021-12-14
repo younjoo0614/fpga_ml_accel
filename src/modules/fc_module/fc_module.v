@@ -1171,24 +1171,27 @@ module fc_module
           end
         end
 
-        STATE_ADD_BIAS: begin 
-          pe_delay <= pe_delay + 1;
+        STATE_ADD_BIAS: begin           
           if (pe_delay[2]) begin
             if (!pe_delay[0] &&!pe_delay[1]) begin
+              pe_delay <= pe_delay + 1;
               pe_result <= pe_result1_temp;
               bias_temp <= {{15{bias[7]}},bias[6:0], {6{1'b0}}};              
             end
             else if (pe_delay[0] && !pe_delay[1]) begin
+              pe_delay <= pe_delay + 1;
               pe_result <= pe_result2_temp;
               bias_temp <= {{15{bias[15]}},bias[14:8], {6{1'b0}}};
               bias_add_result1 <= bias_add_result;
             end
             else if (!pe_delay[0] && pe_delay[1]) begin
+              pe_delay <= pe_delay + 1;
               pe_result <= pe_result3_temp;
               bias_temp <= {{15{bias[23]}},bias[22:16], {6{1'b0}}};
               bias_add_result2 <= bias_add_result;
             end
             else if (pe_delay[0] &&pe_delay[1]) begin
+              pe_delay <= pe_delay + 1;
               pe_result <= pe_result4_temp;
               bias_temp <= {{15{bias[31]}},bias[30:24], {6{1'b0}}};              
               bias_add_result3 <= bias_add_result;
@@ -1197,6 +1200,9 @@ module fc_module
           else if (pe_delay[3]) begin
             bias_add_result4 <= bias_add_result;
             pe_delay <= 4'h0;
+          end
+          else begin
+            pe_delay <= pe_delay + 1;
           end
         end
 
