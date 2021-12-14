@@ -48,6 +48,23 @@ assign C_out[3] = g[3] | (p[3] & C_out[2]);
 
 endmodule
 
+module CLG3
+(
+  input C_in,
+  input [2:0] p, 
+  input [2:0] g,
+
+  output [2:0] C_out
+);
+
+//-------- assign carry out ------------------------------------
+assign C_out[0] = g[0] | (p[0] & C_in);
+assign C_out[1] = g[1] | (p[1] & C_out[0]);
+assign C_out[2] = g[2] | (p[2] & C_out[1]);
+//--------------------------------------------------------------
+
+endmodule
+
 module CLA4
 (
   input [3:0] a,
@@ -469,6 +486,7 @@ module conv_module
   reg [27:0] pe_result_temp;
   reg [7:0] bias;
   reg [1:0] cnt_3;
+  reg [2:0] cnt_weight;
   reg [3:0] cnt_9;
   reg [4:0] cnt_18;
   reg [5:0] cnt_32, cnt_width, cnt_height;
@@ -504,7 +522,7 @@ module conv_module
   .wea(f_we)
   );
 
-  sram_32x1024 weight_sram_32x2560(
+  sram_32x2560 weight_sram_32x2560(
   .addra(w_addr),
   .clka(clk),
   .dina(din),
@@ -662,7 +680,7 @@ module conv_module
             end
           end
         end
-        STATE_RECEIVE_WEIGHT: begin //3x3x3일 때는 직육면체 4개 받고 나머지는 1개씩 받아옴
+        STATE_RECEIVE_WEIGHT: begin //항상 직육면체 4개 받아옴
           // 매번 if 조건문에 *9 가 overhead가 클 수 있으므로 cnt 2개 사용
           if (num_inch[1] && num_inch[0]) begin //INCH 3일 때
             if (S_AXIS_TVALID) begin
@@ -788,14 +806,18 @@ module conv_module
               send_done <= 1'b1;     
               m_axis_tvalid <= 1'b0;      
             end
-            else begin              
+            else begin     
+              if (cnt_weight[0] && cnt_weight[1])   begin
+                state <= STATE_RECEIVE_WEIGHT;
+                w_addr <= 12'h000;
+                w_bram_en <= 1'b1;
+                w_we <= 1'b1;
+                s_axis_tready <= 1'b1; 
+                cnt_weight <= 3'b000;  
+              end       
               m_axis_tvalid <= 1'b0;
-              cnt_output <= 9'h0;                                 
-              state <= STATE_RECEIVE_WEIGHT;
-              w_addr <= 12'h000;
-              w_bram_en <= 1'b1;
-              w_we <= 1'b1;
-              s_axis_tready <= 1'b1;   
+              cnt_output <= 9'h0; 
+              state <= STATE_READ_FEAT;                              
             end
           end
           else begin
