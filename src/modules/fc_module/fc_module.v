@@ -790,6 +790,7 @@ module fc_module
         end
 
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
+          m_axis_tvalid <= 1'b0;
           if (S_AXIS_TVALID) begin
             if (next_cnt[10:0] == feat_size>>2) begin
               if (column_cnt == bias_size - 1) begin
@@ -932,7 +933,6 @@ module fc_module
             end
             else begin
               state <= STATE_COMPUTE;
-              delay <= 2'b00;
               f_bram_en <= 1'b0;
               w1_bram_en <= 1'b0;
               w2_bram_en <= 1'b0;
@@ -960,7 +960,6 @@ module fc_module
                 m_axis_tlast <= 1'b1;
                 fc_done <= 1'b1;            
                 state <= STATE_IDLE;
-                delay <= 2'b00;
               end
             end
             else if (delay == 2'b11) begin
@@ -990,16 +989,13 @@ module fc_module
                 m_axis_tlast <= 1'b1;
                 fc_done <= 1'b1;            
                 state <= STATE_IDLE;
-                delay <= 2'b00;
               end
               else if (w4_addr[10]) begin
                 state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
                 s_axis_tready <= 1'b1;
-                delay <= 2'b00;
               end
             end
             else if (delay[1]) begin
-              delay <= 2'b00;
               state <= STATE_PSUM;  
               m_axis_tvalid <= 1'b0;
               pe_1_en <= 1'b0;
@@ -1127,7 +1123,6 @@ module fc_module
         end
 
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
-          m_axis_tvalid <= 1'b0;
           if (S_AXIS_TVALID) begin
             if (next_cnt[10:0] == feat_size>>2) begin
               receive_cnt <= 10'h000;
@@ -1335,8 +1330,7 @@ module fc_module
         end
         STATE_SEND_RESULT: begin
           //max_index 가 0~9가 아닌 1~10을 출력해야함
-          delay <= delay + 1;
-          m_axis_tdata <= tdata; // tb test 용.
+          m_axis_tdata <= tdata;
           if (|bias_size[1:0]) begin
             case (delay)
               2'b00: begin
@@ -1344,27 +1338,37 @@ module fc_module
                   max_idx <= 4*(b_addr[1:0]-1)+1;
                   max_value <= tdata[7:0];
                 end
+                delay <= delay + 1;
               end
               2'b01: begin
                 if (!max_comp2) begin
                   max_idx <= 4*(b_addr[1:0]-1)+2;
                   max_value <= tdata[15:8];
                 end
+                delay <= delay + 1;
               end
               2'b10: begin
                 if (!max_comp3) begin
                   max_idx <= 4*(b_addr[1:0]-1)+3;
                   max_value <= tdata[23:16];
                 end
+                if (b_addr[8:0]==(bias_size>>2) + 1) delay <= 2'b00;
+                else delay <= delay + 1;
               end
               2'b11: begin
                 if (!max_comp4) begin
                   max_idx <= 4*(b_addr[1:0]-1)+4;
                   max_value <= tdata[31:24];
                 end
+                delay <= 2'b00;
               end
               default: ;
             endcase
+          end
+          else begin
+            if (delay[0] && b_addr[8:0]==bias_size>>2) delay <= 2'b00;
+            else if (delay[1]) delay <= 2'b00;
+            else delay <= delay + 1;
           end
           // else m_axis_tdata <= tdata;
         end
