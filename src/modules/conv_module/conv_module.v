@@ -483,7 +483,7 @@ module conv_module
   reg [255:0] feat_temp;
   reg [71:0] weight;
   reg [287:0] weight_36;
-  reg [27:0] pe_result_temp;
+  wire [27:0] pe_result_temp;
   reg [7:0] bias;
   reg [1:0] cnt_3;
   reg [2:0] cnt_weight, cnt_tdata;
@@ -848,7 +848,6 @@ module conv_module
       feat_3[2] <= 272'h0;
       feat <= 72'h0;
       weight <= 72'h0;
-      pe_result_temp <= 28'h0;
     end
     else begin
       case (state)
