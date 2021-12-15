@@ -637,7 +637,7 @@ module conv_module
               f_we <= 1'b1;
             end
           end
-          else begin
+          else if (command[0]) begin
             state <= STATE_RECEIVE_FEATURE;
             s_axis_tready <= 1'b1;
             f_bram_en <= 1'b1;
@@ -646,8 +646,7 @@ module conv_module
         end
         STATE_RECEIVE_FEATURE: begin
           if (f_receive_done) begin
-            state <= STATE_IDLE;
-            f_receive_done <= 1'b0;
+            state <= STATE_RECEIVE_BIAS;
           end
           else begin
             if (S_AXIS_TVALID) begin
@@ -667,7 +666,6 @@ module conv_module
             s_axis_tready <= 1'b0;
             w_bram_en <= 1'b1;
             w_we <= 1'b1;
-            b_receive_done <= 1'b0;
           end
           else begin
             if (S_AXIS_TVALID) begin
@@ -731,24 +729,28 @@ module conv_module
           end
           else begin
             state <= STATE_COMPUTE;
+            first <= 1'b1;
+            f_bram_en <= 1'b0;
           end
         end
         STATE_READ_WEIGHT: begin
           if (go_compute) begin
             state <= STATE_COMPUTE;
+            first <= 1'b1;
             w_bram_en <= 1'b0;
           end
         end
         STATE_WRITE_RBRAM: begin
           if (r_we) begin
             r_we <= 1'b0;
-            r_bram_en <= 1'b0;
-            if (cnt_18 == 5'd18) begin 
+            r_bram_en <= 1'b0;            
+            if (cnt_18 == 5'd19) begin 
               cnt_18 <= 5'd0;
               if (cnt_width == flen) begin
                 cnt_width <= 5'd0;
                 if (cnt_height == flen) begin
                   cnt_height <= 5'd00;
+                  r_addr <= 11'h0;
                   if (inch_cnt == num_inch) begin
                     inch_cnt <= 9'd0;
                     state <= STATE_READ_BIAS;
@@ -764,10 +766,13 @@ module conv_module
                 else begin
                   state <= STATE_READ_FEAT;
                   f_bram_en <= 1'b1;
+                  r_addr <= next_raddr;
                 end
               end
               else begin
                 state <= STATE_COMPUTE;
+                first <= 1'b1;
+                r_addr <= next_raddr;
               end
             end            
           end
@@ -781,6 +786,7 @@ module conv_module
             state <= STATE_SEND_RESULT;
             m_axis_tvalid <= 1'b1;
             r_bram_en <= 1'b0;
+            if (outch_cnt == num_OUTCH -1) calc_all_done <= 1'b1;
           end
         end
         STATE_SEND_RESULT: begin
@@ -835,6 +841,12 @@ module conv_module
       cnt_18 <= 5'h00;
       cnt_1024 <= 11'h000;
       cnt_32 <= 6'b0;
+      cnt_3 <= 2'b0;
+      cnt_weight <= 3'b0;
+      cnt_tdata <= 3'b0;
+      cnt_output <= 9'h0;
+      cnt_height <= 6'h0;
+      cnt_width <= 6'h0;
       inch_cnt <= 9'h001;
       outch_cnt <= 9'h0;
       weight_36 <= 288'h0;
@@ -848,6 +860,7 @@ module conv_module
       feat_3[2] <= 272'h0;
       feat <= 72'h0;
       weight <= 72'h0;
+      flen <= 6'b0;
     end
     else begin
       case (state)
@@ -860,7 +873,7 @@ module conv_module
         end
         STATE_RECEIVE_FEATURE: begin
           if (S_AXIS_TVALID) begin
-            if (cnt_col == (flen>>2)-1) begin
+            if (cnt_col == (flen>>2) -1) begin
               cnt_col <= 6'b0;
               if (cnt_row == flen-1) begin
                 cnt_row <= 6'b0;
@@ -882,8 +895,8 @@ module conv_module
               f_addr <= next_faddr[11:0];
               cnt_col <= cnt_col + 1;
             end
-        end
           end
+        end
         STATE_RECEIVE_BIAS: begin
           if (S_AXIS_TVALID) begin
             if (cnt_ch == (num_outch>>2)-1) begin
@@ -937,12 +950,12 @@ module conv_module
         end
         STATE_COMPUTE: begin
           if (cnt_18 == 5'd0) begin
-            first <= 1'b1;
+            first <= 1'b0;
             feat <= {feat_3[0][271 - cnt_width*8 -:24],feat_3[0][271 - cnt_width*8 -:24],feat_3[0][271 - cnt_width*8 -:24]};
-            if (inch_cnt[1] && inch_cnt[0]) weight <= weight_36[287:216];
-            else if (inch_cnt[1]) weight <= weight_36[215:144];
-            else if (inch_cnt[0]) weight <= weight_36[143:72];
-            else weight <= weight_36[71:0];
+            if (inch_cnt[1] && inch_cnt[0]) weight <= weight_36[71:0];
+            else if (inch_cnt[1]) weight <= weight_36[143:72];
+            else if (inch_cnt[0]) weight <= weight_36[215:144];
+            else weight <= weight_36[287:216];
             cnt_18 <= cnt_18 + 1;
           end
           else begin
@@ -1023,24 +1036,23 @@ module conv_module
         end
         STATE_READ_WEIGHT: begin
           if (cnt_9[3] && cnt_9[0]) begin //9됐을 때
-            go_compute <= 1'b1;           
+            go_compute <= 1'b1;   
+            cnt_9 <= 4'h0;        
           end
           else begin
             if (read_delay[1]) begin
-              if (num_inch[1]&& num_inch[0]) begin
-                // 1. 3x3x3 일 때만 weight를 12채널 즉 108 바이트 읽어오는 방법
-                // 2. 저장할 때부터 다르게 저장하는 방법 중에 선택해야 할 듯 
-              end
-              else begin
+              //if (num_inch[1]&& num_inch[0]) begin
+              //end
+              //else begin
                 w_addr <= next_waddr;
                 weight_36[31:0] <= {w_dout[7:0],w_dout[15:8], w_dout[23:16], w_dout[31:24]};
                 read_delay <= 2'b00;
                 cnt_9 <= cnt_9 +1;
-              end              
+              //end              
             end
-            else if (read_delay[1]) begin
+            else if (read_delay[0]) begin
               read_delay <= read_delay +1;
-              weight_36 <= weight <<32;
+              weight_36 <= weight_36 <<32;
             end
             else begin
               read_delay <= read_delay + 1;
@@ -1052,7 +1064,6 @@ module conv_module
             if (cnt_height == flen && cnt_width == flen) begin
               inch_cnt <= inch_cnt + 1; //맨 처음만 여기서 더함
             end
-            //r_addr <= next_raddr;
             partial_result <= {{4{pe_result_temp[27]}},pe_result_temp};
           end
           else begin
