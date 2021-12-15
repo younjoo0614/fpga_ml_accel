@@ -662,8 +662,8 @@ module conv_module
         STATE_RECEIVE_BIAS: begin
           if (b_receive_done) begin
             state <= STATE_RECEIVE_WEIGHT;
-            w_addr <= 
-            s_axis_tready <= 1'b0;
+            w_addr <= 12'h0;
+            s_axis_tready <= 1'b1;
             w_bram_en <= 1'b1;
             w_we <= 1'b1;
           end
@@ -701,16 +701,16 @@ module conv_module
         end
         STATE_COMPUTE: begin
           pe_en <= 1'b1;   // COMPUTE할 거 할당을 COMPUTE에서 하기 떄문에 EN도 들어와서 켜줘야 함
-          if (cnt_18==5'd18) begin
+          if (cnt_18==5'd17) begin
             cnt_width <= cnt_width + 1;   
             state <= STATE_WRITE_RBRAM;
             pe_en <= 1'b0;
             r_bram_en <= 1'b1;
-            if (cnt_width == flen) begin
+            if (cnt_width == flen - 1) begin
               cnt_height <= cnt_height + 1;             
-              if (cnt_height == flen && |inch_cnt) begin
+              if (cnt_height == flen -1 && |inch_cnt) begin
                 inch_cnt <= inch_cnt + 1;
-                if (inch_cnt == num_inch) begin
+                if (inch_cnt == num_inch - 1) begin
                   outch_cnt <= outch_cnt + 1;
                   // if (outch_cnt == num_OUTCH) begin 
                     
@@ -744,7 +744,7 @@ module conv_module
           if (r_we) begin
             r_we <= 1'b0;
             r_bram_en <= 1'b0;            
-            if (cnt_18 == 5'd19) begin 
+            if (cnt_18 == 5'd18) begin 
               cnt_18 <= 5'd0;
               if (cnt_width == flen) begin
                 cnt_width <= 5'd0;
@@ -786,6 +786,7 @@ module conv_module
             state <= STATE_SEND_RESULT;
             m_axis_tvalid <= 1'b1;
             r_bram_en <= 1'b0;
+            cnt_tdata <= 3'b0;
             if (outch_cnt == num_OUTCH -1) calc_all_done <= 1'b1;
           end
         end
@@ -822,6 +823,7 @@ module conv_module
             m_axis_tvalid <= 1'b0;
             cnt_output <= cnt_output + 1;
             r_bram_en <= 1'b1;
+            cnt_tdata <= 3'b0;
           end          
         end
       endcase
@@ -950,11 +952,10 @@ module conv_module
         end
         STATE_COMPUTE: begin
           if (cnt_18 == 5'd0) begin
-            first <= 1'b0;
             feat <= {feat_3[0][271 - cnt_width*8 -:24],feat_3[0][271 - cnt_width*8 -:24],feat_3[0][271 - cnt_width*8 -:24]};
-            if (inch_cnt[1] && inch_cnt[0]) weight <= weight_36[71:0];
-            else if (inch_cnt[1]) weight <= weight_36[143:72];
-            else if (inch_cnt[0]) weight <= weight_36[215:144];
+            if (cnt_weight[1] && cnt_weight[0]) weight <= weight_36[71:0];
+            else if (cnt_weight[1]) weight <= weight_36[143:72];
+            else if (cnt_weight[0]) weight <= weight_36[215:144];
             else weight <= weight_36[287:216];
             cnt_18 <= cnt_18 + 1;
           end
@@ -976,7 +977,7 @@ module conv_module
                 else if (flen[4]) feat_3[2][271:128] <= {8'h00,feat_temp,8'h00};
                 else if (flen[3]) feat_3[2][271:192] <={8'h00,feat_temp,8'h00};
                 else feat_3[2][271:224] <= {8'h00,feat_temp,8'h00};
-                if (!inch_cnt[1] && !inch_cnt[0]) go_read_weight <= 1'b1; //0일 때 처음 들어오고 4번에 한 번씩 읽어야 하니까
+                if (!cnt_weight[1] && !cnt_weight[0]) go_read_weight <= 1'b1; //0일 때 처음 들어오고 4번에 한 번씩 읽어야 하니까
                 cnt_height <= 5'h0;
               end
               else begin //두 번째 줄 읽을 때
@@ -1061,7 +1062,7 @@ module conv_module
         end
         STATE_WRITE_RBRAM: begin
           if (~|inch_cnt) begin //
-            if (cnt_height == flen && cnt_width == flen) begin
+            if (cnt_height == flen -1 && cnt_width == flen-1) begin
               inch_cnt <= inch_cnt + 1; //맨 처음만 여기서 더함
             end
             partial_result <= {{4{pe_result_temp[27]}},pe_result_temp};
