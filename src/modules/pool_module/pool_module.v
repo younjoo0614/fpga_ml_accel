@@ -1,33 +1,37 @@
 /*
 * pool_module.v
 */
-module CLA_8Bit
+module COMP_8Bit(
+  input [7:0] A,
+  input [7:0] B,
+
+  output comp // comp == 1 -> A > B
+ );
+  wire [1:0] C_out_LCU;
+  wire [1:0] P;
+  wire [1:0] G;
+
+  wire [7:0] A_1;    // if C_in = 1, inverse of A
+  wire [7:0] S;
+  assign comp = S[7];
+  assign A_1 = ~A;
+
+
+  CLG2 clg2(.C_in(1'b1), .p(P), .g(G), .C_out(C_out_LCU));
+  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(1'b1), .s(S[3:0]), .C_out(), .p_g(P[0]), .g_g(G[0]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(), .p_g(P[1]), .g_g(G[1]), .of());
+endmodule
+
+module CLG2
 (
-  input [7:0] A, 
-  input [7:0] B, 
-  input   C_in,     // if 0 --> add, 1 --> sub
+  input C_in,
+  input [1:0] p,
+  input [1:0] g,
 
-  output [7:0] S,    // sum
-  output  C_out,      // borrow if C_in = 1 (subtract)
-  output  OF      // overflow
+  output [1:0] C_out
 );
-
-wire carry, carry1;
-wire [1:0] P;
-wire [1:0] G;
-
-wire [7:0] A_1;    // if C_in = 1, inverse of A
-
-//--------- assign A_1, C_out using C_in condition --------------
-assign A_1 = C_in ? ~A : A;
-assign C_out = C_in ? ~carry1 : carry1;
-//---------------------------------------------------------------
-
-
-CLA4 CLA4_0 (.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(carry), .p_g(P[0]), .g_g(G[0]), .of());
-CLA4 CLA4_1 (.a(A_1[7:4]), .b(B[7:4]), .C_in(carry), .s(S[7:4]), .C_out(carry1), .p_g(P[1]), .g_g(G[1]), .of(OF));
-
-
+  assign C_out[0] = g[0] | (p[0] & C_in);
+  assign C_out[1] = g[1] | (p[1] & C_out[0]);
 endmodule
 
 module CLG4
@@ -155,25 +159,24 @@ module pool_module
   //////////////////////////////////////////////////////////////////////////
   reg [7:0] feat[63:0];
   reg [6:0] addr;
-  reg [5:0] flen_reg;
-  reg [8:0] inch_reg;
+  reg [5:0] flen;
+  reg [8:0] num_inch;
   reg [5:0] idx_16;
   reg [1:0] delay;
   reg [7:0] input_a, input_b, max;
   reg [2:0] cnt_4;
-  wire [7:0] bigb;
+  reg [11:0] cnt_receive;
   reg receive_done;
   reg [31:0] tdata;
+  wire comp;
+  
 
-  CLA_8Bit ab_cla_8bit(
+  COMP_8Bit comp_8bit_1(
     .A(input_a),
     .B(input_b),
-    .C_in(1'b1),
-    .S(bigb),
-    .C_out(),
-    .OF()
+
+    .comp(comp1)
   );
-  
 
   always @ (posedge clk) begin
     if (!rstn) begin
@@ -182,6 +185,7 @@ module pool_module
       delay <= 2'b0;
       idx_16 <= 6'b000000;
       cnt_4 <= 3'b000;
+      cnt_receive <= 12'b0;
     end
     else begin
       case (state)
@@ -191,8 +195,8 @@ module pool_module
           m_axis_tvalid <= 1'b0;
           m_axis_tlast <= 1'b0;
           if (pool_start) begin
-            flen_reg <= Flen;
-            inch_reg <= num_INCH;
+            flen <= Flen;
+            num_inch <= num_INCH;
             state <= STATE_RECEIVE_DATA;
             s_axis_tready <= 1'b1;
           end
@@ -201,86 +205,124 @@ module pool_module
           end
         end
 
-        STATE_RECEIVE_DATA: begin
-          m_axis_tvalid <= 1'b0;
-          
-          if (addr[6] && flen_reg[5]) begin
+        STATE_RECEIVE_DATA: begin     
+          m_axis_tvalid <= 1'b0;     
+          s_axis_tready <= 1'b1;
+          if (addr[6] && flen[5]) begin
             state <= STATE_POOL;
             addr <= 7'h00;
             s_axis_tready <= 1'b0; 
+            cnt_receive <= cnt_receive + 1;
           end
-          else if (addr[5] && flen_reg[4]) begin
+          else if (addr[5] && flen[4]) begin
             state <= STATE_POOL;
             addr <= 7'h00;
             s_axis_tready <= 1'b0; 
+            cnt_receive <= cnt_receive + 1;
           end
-          else if (addr[4] && flen_reg[3]) begin
+          else if (addr[4] && flen[3]) begin
             state <= STATE_POOL;
             addr <= 7'h00;
             s_axis_tready <= 1'b0; 
+            cnt_receive <= cnt_receive + 1;
           end
-          else if (addr[3] && flen_reg[2]) begin
+          else if (addr[3] && flen[2]) begin
             state <= STATE_POOL;
             addr <= 7'h00;
-            s_axis_tready <= 1'b0; 
-          end
-          else if (s_axis_tready && S_AXIS_TVALID) begin
-            addr <= addr + 4;
-            feat[addr+3] <= S_AXIS_TDATA[31:24];
-            feat[addr+2] <= S_AXIS_TDATA[23:16];
-            feat[addr+1] <= S_AXIS_TDATA[15:8];
-            feat[addr] <= S_AXIS_TDATA[7:0];
-            if (S_AXIS_TLAST) receive_done <= 1'b1;    
             s_axis_tready <= 1'b0;
+            cnt_receive <= cnt_receive + 1;
           end
-          else begin
-            s_axis_tready <= 1'b1;
-          end          
+          else begin  
+            if (s_axis_tready) begin
+              addr <= addr + 4;
+              feat[addr+3] <= S_AXIS_TDATA[31:24];
+              feat[addr+2] <= S_AXIS_TDATA[23:16];
+              feat[addr+1] <= S_AXIS_TDATA[15:8];
+              feat[addr] <= S_AXIS_TDATA[7:0];
+              if (cnt_receive == (flen*num_inch>>1)-1) receive_done <= 1'b1;    
+              s_axis_tready <= 1'b0;   
+            end           
+          end
         end
+        // STATE_RECEIVE_DATA: begin
+        //   if (S_AXIS_TVALID) begin
+        //     feat[4*cnt_col] <= S_AXIS_TDATA[7:0];
+        //     feat[4*cnt_col + 1] <= S_AXIS_TDATA[15:8];
+        //     feat[4*cnt_col + 2] <= S_AXIS_TDATA[23:16];
+        //     feat[4*cnt_col + 3] <= S_AXIS_TDATA[31:24];
+        //     if (cnt_col == (flen>>1)-1) begin // 2 row receive (2 * flen data)
+        //       cnt_col <= 6'b0;
+        //       delay <= 2'b0;
+        //       s_axis_tready <= 1'b0;
+        //       state <= STATE_POOL;
+        //       if (cnt_row == (flen>>1)-1) begin // 1 channel receive (flen * flen data)
+        //         cnt_row <= 6'b0;
+        //         if (cnt_ch == num_inch-1) begin // (num_inch) channel receive
+        //           cnt_ch <= 7'b0;
+        //           receive_done <= 1'b1;
+        //         end
+        //         else begin
+        //           cnt_ch <= cnt_ch + 1;
+        //         end
+        //       end
+        //       else begin
+        //         cnt_row <= cnt_row + 1;
+        //       end
+        //     end
+        //     else begin
+        //       cnt_col <= cnt_col + 1;
+        //     end
+        //   end
+        // end
 
         STATE_POOL: begin  
-          s_axis_tready <= 1'b0;
+          s_axis_tready <= 1'b0; 
           m_axis_tvalid <= 1'b0;
-          delay <= delay + 1;
           case (delay)
             2'b00: begin
               input_a <= feat[idx_16];
               input_b <= feat[idx_16 + 1];
+              delay <= delay + 1;
             end
             2'b01: begin
-              input_a <= (input_b > input_a) ? input_b : input_a;
-              if (flen_reg[2]) input_b <= feat[idx_16 + 6'd4];
-              else if (flen_reg[3]) input_b <= feat[idx_16 + 6'd8];
-              else if (flen_reg[4]) input_b <= feat[idx_16 + 6'd16];
+              input_a <= (!comp1) ? input_b : input_a;
+              if (flen[2]) input_b <= feat[idx_16 + 6'd4];
+              else if (flen[3]) input_b <= feat[idx_16 + 6'd8];
+              else if (flen[4]) input_b <= feat[idx_16 + 6'd16];
               else input_b <= feat[idx_16 + 6'd32];
+              delay <= delay + 1;
             end
             2'b10: begin
-              input_a <= (input_b > input_a) ? input_b : input_a;
-              if (flen_reg[3]) input_b <= feat[idx_16 + 6'd9];
-              else if (flen_reg[4]) input_b <= feat[idx_16 + 6'd17];
-              else if (flen_reg[2]) input_b <= feat[idx_16 + 6'd5];
+              input_a <= (!comp1) ? input_b : input_a;
+              if (flen[3]) input_b <= feat[idx_16 + 6'd9];
+              else if (flen[4]) input_b <= feat[idx_16 + 6'd17];
+              else if (flen[2]) input_b <= feat[idx_16 + 6'd5];
               else input_b <= feat[idx_16 + 6'd33];
+              delay <= delay + 1;
             end
-            default: begin
-              max <= (input_b > input_a) ? input_b : input_a;
+            2'b11: begin
+              max <= (!comp1) ? input_b : input_a;
               state <= STATE_ACCUM;
               delay <= 2'b0;
             end
+            default: ;
           endcase
         end
 
         STATE_ACCUM: begin
-          cnt_4 <= cnt_4 + 1;
+          idx_16 <= idx_16 + 2;
           case (cnt_4)
             3'b000: begin
               tdata[7:0] <= max;
               state <= STATE_POOL;
-              idx_16 <= idx_16 + 2;
+              cnt_4 <= cnt_4 + 1;
             end
             3'b001: begin
               tdata[15:8] <= max;
-              if (flen_reg[2]) begin
+              cnt_4 <= cnt_4 + 1;
+              if (flen[2]) begin
                 state <= STATE_RECEIVE_DATA;
+                s_axis_tready <= 1'b1;
                 idx_16 <= 6'b000000;
               end
               else begin
@@ -292,12 +334,12 @@ module pool_module
               tdata[23:16] <= max;
               state <= STATE_POOL;
               idx_16 <= idx_16 + 2;
+              cnt_4 <= cnt_4 + 1;
             end
             default: begin
               state <= STATE_DATA_SEND;
               tdata[31:24] <= max;
               cnt_4 <= 3'b000;
-              idx_16 <= idx_16 + 2;
             end
           endcase
         end
@@ -306,7 +348,7 @@ module pool_module
           m_axis_tvalid <= 1'b1;
           m_axis_tdata <= tdata;
           
-          if (flen_reg[5] && idx_16[5]) begin
+          if (flen[5] && idx_16[5]) begin
             if (receive_done) begin
               m_axis_tlast <= 1'b1;
               pool_done <= 1'b1;
@@ -317,7 +359,7 @@ module pool_module
               idx_16 <= 6'b000000;
             end
           end
-          else if (flen_reg[4] && idx_16[4]) begin
+          else if (flen[4] && idx_16[4]) begin
             if (receive_done) begin
               m_axis_tlast <= 1'b1;
               pool_done <= 1'b1;
@@ -328,7 +370,7 @@ module pool_module
               idx_16 <= 6'b000000;
             end
           end           
-          else if (flen_reg[3] && idx_16[3]) begin
+          else if (flen[3] && idx_16[3]) begin
             if (receive_done) begin
               m_axis_tlast <= 1'b1;
               pool_done <= 1'b1;
@@ -339,7 +381,7 @@ module pool_module
               idx_16 <= 6'b000000;
             end
           end   
-          else if (flen_reg[2] && idx_16[2]) begin
+          else if (flen[2] && idx_16[2]) begin
             if (receive_done) begin
               m_axis_tlast <= 1'b1;
               pool_done <= 1'b1;
