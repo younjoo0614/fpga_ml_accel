@@ -200,14 +200,11 @@ module pool_module
             state <= STATE_RECEIVE_DATA;
             s_axis_tready <= 1'b1;
           end
-          else begin
-          s_axis_tready <= 1'b0;
-          end
+          else s_axis_tready <= 1'b0;
         end
 
         STATE_RECEIVE_DATA: begin     
-          m_axis_tvalid <= 1'b0;     
-          s_axis_tready <= 1'b1;
+          m_axis_tvalid <= 1'b0;
           if (addr[6] && flen[5]) begin
             state <= STATE_POOL;
             addr <= 7'h00;
@@ -232,8 +229,7 @@ module pool_module
             s_axis_tready <= 1'b0;
             cnt_receive <= cnt_receive + 1;
           end
-          else begin  
-            if (s_axis_tready) begin
+          else if (s_axis_tready) begin
               addr <= addr + 4;
               feat[addr+3] <= S_AXIS_TDATA[31:24];
               feat[addr+2] <= S_AXIS_TDATA[23:16];
@@ -241,8 +237,8 @@ module pool_module
               feat[addr] <= S_AXIS_TDATA[7:0];
               if (cnt_receive == (flen*num_inch>>1)-1) receive_done <= 1'b1;    
               s_axis_tready <= 1'b0;   
-            end           
           end
+          else s_axis_tready <= 1'b1;
         end
         // STATE_RECEIVE_DATA: begin
         //   if (S_AXIS_TVALID) begin
