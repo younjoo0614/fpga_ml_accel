@@ -633,19 +633,25 @@ module conv_module
           end
           else begin
             if (S_AXIS_TVALID) begin
-              if ((cnt_col == (flen>>2)-1) && (cnt_row == flen-1) && (cnt_ch == num_inch-1)) begin
+              if (next_faddr[11:0] == flen*flen*num_inch>>2) begin
                 s_axis_tready <= 1'b0;
                 f_bram_en <= 1'b0;
                 f_we <= 1'b0;
                 f_receive_done <= 1'b1;
               end
+              // if ((cnt_col == (flen>>2)-1) && (cnt_row == flen-1) && (cnt_ch == num_inch-1)) begin
+                // s_axis_tready <= 1'b0;
+                // f_bram_en <= 1'b0;
+                // f_we <= 1'b0;
+                // f_receive_done <= 1'b1;
+              // end
             end
           end
         end
         STATE_RECEIVE_BIAS: begin
           if (b_receive_done) begin
             state <= STATE_RECEIVE_WEIGHT;
-            w_addr <= 
+            w_addr <= 12'h000;
             s_axis_tready <= 1'b0;
             w_bram_en <= 1'b1;
             w_we <= 1'b1;
@@ -833,30 +839,32 @@ module conv_module
         end
         STATE_RECEIVE_FEATURE: begin
           if (S_AXIS_TVALID) begin
-            if (cnt_col == (flen>>2)-1) begin
-              cnt_col <= 6'b0;
-              if (cnt_row == flen-1) begin
-                cnt_row <= 6'b0;
-                if (cnt_ch == num_inch-1) begin
-                  f_addr <= 12'b0;
-                  cnt_ch <= 7'b0;
-                end
-                else begin
-                  f_addr <= next_faddr[11:0];
-                  cnt_ch <= cnt_ch + 1;
-                end
-              end
-              else begin
-                f_addr <= next_faddr[11:0];
-                cnt_row <= cnt_row + 1;
-              end
-            end
-            else begin
-              f_addr <= next_faddr[11:0];
-              cnt_col <= cnt_col + 1;
-            end
-        end
+            if (next_faddr[11:0] == flen*flen*num_inch>>2) f_addr <= 12'h000;
+            else f_addr <= next_faddr[11:0];
+          //   if (cnt_col == (flen>>2)-1) begin
+          //     cnt_col <= 6'b0;
+          //     if (cnt_row == flen-1) begin
+          //       cnt_row <= 6'b0;
+          //       if (cnt_ch == num_inch-1) begin
+          //         f_addr <= 12'b0;
+          //         cnt_ch <= 7'b0;
+          //       end
+          //       else begin
+          //         f_addr <= next_faddr[11:0];
+          //         cnt_ch <= cnt_ch + 1;
+          //       end
+          //     end
+          //     else begin
+          //       f_addr <= next_faddr[11:0];
+          //       cnt_row <= cnt_row + 1;
+          //     end
+          //   end
+          //   else begin
+          //     f_addr <= next_faddr[11:0];
+          //     cnt_col <= cnt_col + 1;
+          //   end
           end
+        end
         STATE_RECEIVE_BIAS: begin
           if (S_AXIS_TVALID) begin
             if (cnt_ch == (num_outch>>2)-1) begin
