@@ -475,7 +475,7 @@ module conv_module
   wire [7:0] p1_a, p1_b;
   reg [1:0] read_delay;
   reg [31:0] partial_result;
-  wire [27:0] temp, partial_data;
+  wire [27:0] new_added, partial_data;
   reg [271:0] feat_3[2:0];
   reg [5:0] flen;
   reg [8:0] num_inch, num_outch;
@@ -486,7 +486,7 @@ module conv_module
   reg [27:0] pe_result_temp;
   reg [7:0] bias;
   reg [1:0] cnt_3;
-  reg [2:0] cnt_weight;
+  reg [2:0] cnt_weight, cnt_tdata;
   reg [3:0] cnt_9;
   reg [4:0] cnt_18;
   reg [5:0] cnt_32, cnt_width, cnt_height;
@@ -587,7 +587,7 @@ module conv_module
     .A(r_dout[27:0]),
     .B(cla_b),
     .C_in(1'b0),
-    .S(temp),
+    .S(new_added),
     .C_out()
   );
 
@@ -626,7 +626,7 @@ module conv_module
           end
           else if (command[1]) begin
             if (command[0]) begin
-              state <= STATE_READ_FEAT;
+              state <= STATE_COMPUTE;
               f_bram_en <= 1'b1;
               w_bram_en <= 1'b1;
             end
@@ -684,10 +684,11 @@ module conv_module
           if (S_AXIS_TVALID) begin
             if (cnt_filter[2]) begin // 4개의 filter 받을 때 마다 (receive 9번; 36개 data)
               if (cnt_ch == num_inch-1) begin // 4*(input channel) 만큼 filter를 받음 (receive 9*in_ch번; 36*in_ch개 data)
-                state <= STATE_COMPUTE;
+                state <= STATE_READ_FEAT;
                 s_axis_tready <= 1'b0;
                 w_bram_en <= 1'b0;
                 w_we <= 1'b0;
+                go_read_weight <= 1'b1;
               end
             end
           end
@@ -697,22 +698,25 @@ module conv_module
             state <= STATE_PREPARE_RESULT;
             r_bram_en <= 1'b1;
             f_bram_en <= 1'b0;
+            r_addr <= 11'h0;
           end
         end
         STATE_COMPUTE: begin
-          pe_en <= 1'b1;   
+          pe_en <= 1'b1;   // COMPUTE할 거 할당을 COMPUTE에서 하기 떄문에 EN도 들어와서 켜줘야 함
           if (cnt_18==5'd18) begin
             cnt_width <= cnt_width + 1;   
             state <= STATE_WRITE_RBRAM;
+            pe_en <= 1'b0;
+            r_bram_en <= 1'b1;
             if (cnt_width == flen) begin
-              cnt_height <= cnt_height + 1;              
-              r_bram_en <= 1'b1;
-              if (cnt_height == flen) begin
+              cnt_height <= cnt_height + 1;             
+              if (cnt_height == flen && |inch_cnt) begin
                 inch_cnt <= inch_cnt + 1;
                 if (inch_cnt == num_inch) begin
                   outch_cnt <= outch_cnt + 1;
-                  if (outch_cnt == num_OUTCH) begin   
-                  end
+                  // if (outch_cnt == num_OUTCH) begin 
+                    
+                  // end
                 end
               end
             end    
@@ -738,7 +742,8 @@ module conv_module
         STATE_WRITE_RBRAM: begin
           if (r_we) begin
             r_we <= 1'b0;
-            if (cnt_18 == 5'd18) begin
+            r_bram_en <= 1'b0;
+            if (cnt_18 == 5'd18) begin 
               cnt_18 <= 5'd0;
               if (cnt_width == flen) begin
                 cnt_width <= 5'd0;
@@ -747,25 +752,22 @@ module conv_module
                   if (inch_cnt == num_inch) begin
                     inch_cnt <= 9'd0;
                     state <= STATE_READ_BIAS;
-                    r_bram_en <= 1'b0;
                     b_addr <= outch_cnt >> 2;
                     f_bram_en <= 1'b1;
+                    f_addr <= 12'h0;
                   end
                   else begin
                     state <= STATE_READ_FEAT;
                     f_bram_en <= 1'b1;
-                    r_bram_en <= 1'b0;
                   end
                 end
                 else begin
                   state <= STATE_READ_FEAT;
                   f_bram_en <= 1'b1;
-                  r_bram_en <= 1'b0;
                 end
               end
               else begin
                 state <= STATE_COMPUTE;
-                r_bram_en <= 1'b0;
               end
             end            
           end
@@ -775,7 +777,7 @@ module conv_module
           else if (read_delay [1] && !read_delay[0]) r_we <= 1'b1;
         end
         STATE_PREPARE_RESULT: begin
-          if (cnt_3[1] && cnt_3[0]) begin
+          if (cnt_tdata[2]) begin
             state <= STATE_SEND_RESULT;
             m_axis_tvalid <= 1'b1;
             r_bram_en <= 1'b0;
@@ -785,11 +787,12 @@ module conv_module
           if (send_done) begin
             state <= STATE_IDLE;
           end
-          else if (cnt_output == flen * flen >> 2) begin //weight 직육면체 하나에 대해서 계산 끝났을 때           
+          else if (cnt_output == flen * flen >> 2 - 1) begin //weight 직육면체 하나에 대해서 계산 끝났을 때           
             if (outch_cnt == num_OUTCH) begin
               outch_cnt <= 9'd0;    
               send_done <= 1'b1;     
-              m_axis_tvalid <= 1'b0;      
+              m_axis_tvalid <= 1'b0;     
+              m_axis_tlast <= 1'b1; 
             end
             else begin     
               if (cnt_weight[0] && cnt_weight[1])   begin
@@ -799,10 +802,13 @@ module conv_module
                 w_we <= 1'b1;
                 s_axis_tready <= 1'b1; 
                 cnt_weight <= 3'b000;  
-              end       
+              end    
+              else begin
+                state <= STATE_READ_FEAT;
+                cnt_weight <= cnt_weight + 1;
+              end   
               m_axis_tvalid <= 1'b0;
-              cnt_output <= 9'h0; 
-              state <= STATE_READ_FEAT;                              
+              cnt_output <= 9'h0;                                      
             end
           end
           else begin
@@ -932,6 +938,7 @@ module conv_module
         end
         STATE_COMPUTE: begin
           if (cnt_18 == 5'd0) begin
+            first <= 1'b1;
             feat <= {feat_3[0][271 - cnt_width*8 -:24],feat_3[0][271 - cnt_width*8 -:24],feat_3[0][271 - cnt_width*8 -:24]};
             if (inch_cnt[1] && inch_cnt[0]) weight <= weight_36[287:216];
             else if (inch_cnt[1]) weight <= weight_36[215:144];
@@ -939,10 +946,8 @@ module conv_module
             else weight <= weight_36[71:0];
             cnt_18 <= cnt_18 + 1;
           end
-          else if (cnt_18[5] && cnt_18[1]) begin
-            
-          end
           else begin
+            if (first) first <= 1'b0;
             cnt_18 <= cnt_18 + 1;
             feat <= feat << 8;
             weight <= feat << 8;
@@ -1044,16 +1049,16 @@ module conv_module
           end
         end
         STATE_WRITE_RBRAM: begin
-          if (~|inch_cnt) begin
+          if (~|inch_cnt) begin //
             if (cnt_height == flen && cnt_width == flen) begin
-              inch_cnt <= inch_cnt + 1;
+              inch_cnt <= inch_cnt + 1; //맨 처음만 여기서 더함
             end
-            r_addr <= next_raddr;
+            //r_addr <= next_raddr;
             partial_result <= {{4{pe_result_temp[27]}},pe_result_temp};
           end
           else begin
             if (read_delay[1]) begin
-              partial_result <= {{4{temp[27]}},temp};
+              partial_result <= {{4{new_added[27]}},new_added};
               read_delay <= 2'b00;
               r_addr <= next_raddr;
             end
@@ -1066,34 +1071,35 @@ module conv_module
             r_addr <= next_raddr;
           end
           else if (read_delay[1] && read_delay[0]) begin
-            cnt_3 <= cnt_3 +1;
-            case (cnt_3)
-              2'b00: begin
+            cnt_tdata <= cnt_tdata +1;
+            case (cnt_tdata)
+              3'b000: begin
                 tdata[7:0] <=partial_data[27] ? (8'b0000_0000) : 
                           ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111); 
               end
-              2'b01: begin
+              3'b001: begin
                 tdata[15:8] <= partial_data[27] ? (8'b0000_0000) : 
                           ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111); 
               end
-              2'b10: begin
+              3'b010: begin
                 tdata[23:16] <=partial_data[27] ? (8'b0000_0000) : 
                           ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111); 
               end
-              2'b11: begin
+              3'b011: begin
                 tdata[31:24] <= partial_data[27] ? (8'b0000_0000) : 
                           ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111); 
-                cnt_3 <= 2'b00;
+              end
+              3'b100 : begin
+                m_axis_tdata <= tdata;
               end
             endcase            
           end
           else read_delay <= read_delay + 1;
         end
         STATE_SEND_RESULT: begin
-          m_axis_tdata <= tdata;
+          
         end
       endcase
     end
-  end
-  
+  end  
 endmodule
