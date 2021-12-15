@@ -633,19 +633,25 @@ module conv_module
           end
           else begin
             if (S_AXIS_TVALID) begin
-              if ((cnt_col == (flen>>2)-1) && (cnt_row == flen-1) && (cnt_ch == num_inch-1)) begin
+              if (next_faddr[11:0] == flen*flen*num_inch>>2) begin
                 s_axis_tready <= 1'b0;
                 f_bram_en <= 1'b0;
                 f_we <= 1'b0;
                 f_receive_done <= 1'b1;
               end
+              // if ((cnt_col == (flen>>2)-1) && (cnt_row == flen-1) && (cnt_ch == num_inch-1)) begin
+                // s_axis_tready <= 1'b0;
+                // f_bram_en <= 1'b0;
+                // f_we <= 1'b0;
+                // f_receive_done <= 1'b1;
+              // end
             end
           end
         end
         STATE_RECEIVE_BIAS: begin
           if (b_receive_done) begin
             state <= STATE_RECEIVE_WEIGHT;
-            w_addr <= 
+            w_addr <= 12'h000;
             s_axis_tready <= 1'b0;
             w_bram_en <= 1'b1;
             w_we <= 1'b1;
@@ -662,29 +668,14 @@ module conv_module
             end
           end
         end
-        STATE_RECEIVE_WEIGHT: begin //3x3x3일 때는 직육면체 4개 받고 나머지는 1개씩 받아옴
-          // 매번 if 조건문에 *9 가 overhead가 클 수 있으므로 cnt 2개 사용
-          if (num_inch[1] && num_inch[0]) begin //INCH 3일 때
-            if (S_AXIS_TVALID) begin
-              if (cnt_filter[2]) begin // 4개의 filter 받을 때 마다 (36개 data)
-                if (cnt_ch == num_inch-1) begin // 4*(input channel) 만큼 filter를 받음
-                  state <= STATE_COMPUTE;
-                  s_axis_tready <= 1'b0;
-                  w_bram_en <= 1'b0;
-                  w_we <= 1'b0;
-                end
-              end
-            end
-          end
-          else begin
-            if (S_AXIS_TVALID) begin
-              if (cnt_filter[2]) begin // 4개의 filter 받을 때 마다 (36개 data)
-                if (cnt_ch == (num_inch<<2)-1) begin // input channel 만큼 filter를 받음
-                  state <= STATE_COMPUTE;
-                  s_axis_tready <= 1'b0;
-                  w_bram_en <= 1'b0;
-                  w_we <= 1'b0;
-                end
+        STATE_RECEIVE_WEIGHT: begin
+          if (S_AXIS_TVALID) begin
+            if (cnt_filter[2]) begin // 4개의 filter 받을 때 마다 (receive 9번; 36개 data)
+              if (cnt_ch == num_inch-1) begin // 4*(input channel) 만큼 filter를 받음 (receive 9*in_ch번; 36*in_ch개 data)
+                state <= STATE_COMPUTE;
+                s_axis_tready <= 1'b0;
+                w_bram_en <= 1'b0;
+                w_we <= 1'b0;
               end
             end
           end
@@ -848,30 +839,32 @@ module conv_module
         end
         STATE_RECEIVE_FEATURE: begin
           if (S_AXIS_TVALID) begin
-            if (cnt_col == (flen>>2)-1) begin
-              cnt_col <= 6'b0;
-              if (cnt_row == flen-1) begin
-                cnt_row <= 6'b0;
-                if (cnt_ch == num_inch-1) begin
-                  f_addr <= 12'b0;
-                  cnt_ch <= 7'b0;
-                end
-                else begin
-                  f_addr <= next_faddr[11:0];
-                  cnt_ch <= cnt_ch + 1;
-                end
-              end
-              else begin
-                f_addr <= next_faddr[11:0];
-                cnt_row <= cnt_row + 1;
-              end
-            end
-            else begin
-              f_addr <= next_faddr[11:0];
-              cnt_col <= cnt_col + 1;
-            end
-        end
+            if (next_faddr[11:0] == flen*flen*num_inch>>2) f_addr <= 12'h000;
+            else f_addr <= next_faddr[11:0];
+          //   if (cnt_col == (flen>>2)-1) begin
+          //     cnt_col <= 6'b0;
+          //     if (cnt_row == flen-1) begin
+          //       cnt_row <= 6'b0;
+          //       if (cnt_ch == num_inch-1) begin
+          //         f_addr <= 12'b0;
+          //         cnt_ch <= 7'b0;
+          //       end
+          //       else begin
+          //         f_addr <= next_faddr[11:0];
+          //         cnt_ch <= cnt_ch + 1;
+          //       end
+          //     end
+          //     else begin
+          //       f_addr <= next_faddr[11:0];
+          //       cnt_row <= cnt_row + 1;
+          //     end
+          //   end
+          //   else begin
+          //     f_addr <= next_faddr[11:0];
+          //     cnt_col <= cnt_col + 1;
+          //   end
           end
+        end
         STATE_RECEIVE_BIAS: begin
           if (S_AXIS_TVALID) begin
             if (cnt_ch == (num_outch>>2)-1) begin
@@ -885,42 +878,21 @@ module conv_module
           end
         end
         STATE_RECEIVE_WEIGHT: begin
-          if (num_inch[1] && num_inch[0]) begin //INCH 3일 때
-            if (S_AXIS_TVALID) begin
-              if (cnt_filter[2]) begin // 4개의 filter 받을 때 마다 (36개 data)
-                cnt_filter <= 3'b0;
-                if (cnt_ch == num_inch-1) begin // 4*(input channel) 만큼 filter를 받음
-                  w_addr <= 10'b0;
-                  cnt_ch <= 7'b0;
-                end
-                else begin
-                  w_addr <= next_waddr[9:0];
-                  cnt_ch <= cnt_ch + 1;
-                end
+          if (S_AXIS_TVALID) begin
+            if (cnt_filter[2]) begin // 4개의 filter 받을 때 마다 (receive 9번; 36개 data)
+              cnt_filter <= 3'b0;
+              if (cnt_ch == num_inch-1) begin // 4*(input channel) 만큼 filter를 받음 (receive 9*in_ch번; 36*in_ch개 data)
+                w_addr <= 10'b0;
+                cnt_ch <= 7'b0;
               end
               else begin
                 w_addr <= next_waddr[9:0];
-                cnt_filter <= cnt_filter + 1;
+                cnt_ch <= cnt_ch + 1;
               end
             end
-          end
-          else begin
-            if (S_AXIS_TVALID) begin
-              if (cnt_filter[2]) begin // 4개의 filter 받을 때 마다 (36개 data)
-                cnt_filter <= 3'b0;
-                if (cnt_ch == (num_inch<<2)-1) begin // input channel 만큼 filter를 받음
-                  w_addr <= 10'b0;
-                  cnt_ch <= 7'b0;
-                end
-                else begin
-                  w_addr <= next_waddr[9:0];
-                  cnt_ch <= cnt_ch + 1;
-                end
-              end
-              else begin
-                w_addr <= next_waddr[9:0];
-                cnt_filter <= cnt_filter + 1;
-              end
+            else begin
+              w_addr <= next_waddr[9:0];
+              cnt_filter <= cnt_filter + 1;
             end
           end
         end
