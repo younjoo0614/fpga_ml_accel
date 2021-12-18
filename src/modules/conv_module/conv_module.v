@@ -20,13 +20,13 @@ module CLA_28Bit (
 
   CLG4 clg4(.C_in(C_in), .p(P[3:0]), .g(G[3:0]), .C_out(C_out_LCU[3:0]));
   CLG3 clg3(.C_in(C_out_LCU[3]),.p(P[6:4]), .g(G[6:4]), .C_out(C_out_LCU[6:4]));
-  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
-  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
-  CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(C_out_LCU[2]), .p_g(P[2]), .g_g(G[2]), .of());
-  CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(C_out_LCU[3]), .p_g(P[3]), .g_g(G[3]), .of());
-  CLA4 cla4_4(.a(A_1[19:16]), .b(B[19:16]), .C_in(C_out_LCU[3]), .s(S[19:16]), .C_out(C_out_LCU[4]), .p_g(P[4]), .g_g(G[4]), .of());
-  CLA4 cla4_5(.a(A_1[23:20]), .b(B[23:20]), .C_in(C_out_LCU[4]), .s(S[23:20]), .C_out(C_out_LCU[5]), .p_g(P[5]), .g_g(G[5]), .of());
-  CLA4 cla4_6(.a(A_1[27:24]), .b(B[27:24]), .C_in(C_out_LCU[5]), .s(S[27:24]), .C_out(C_out_LCU[6]), .p_g(P[6]), .g_g(G[6]), .of());
+  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(), .p_g(P[0]), .g_g(G[0]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(), .p_g(P[1]), .g_g(G[1]), .of());
+  CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(), .p_g(P[2]), .g_g(G[2]), .of());
+  CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(), .p_g(P[3]), .g_g(G[3]), .of());
+  CLA4 cla4_4(.a(A_1[19:16]), .b(B[19:16]), .C_in(C_out_LCU[3]), .s(S[19:16]), .C_out(), .p_g(P[4]), .g_g(G[4]), .of());
+  CLA4 cla4_5(.a(A_1[23:20]), .b(B[23:20]), .C_in(C_out_LCU[4]), .s(S[23:20]), .C_out(), .p_g(P[5]), .g_g(G[5]), .of());
+  CLA4 cla4_6(.a(A_1[27:24]), .b(B[27:24]), .C_in(C_out_LCU[5]), .s(S[27:24]), .C_out(), .p_g(P[6]), .g_g(G[6]), .of());
 
 endmodule
 
@@ -385,10 +385,10 @@ module CLA_16Bit (
   assign C_out = C_in ? ~C_out_LCU[3] : C_out_LCU[3];
 
   CLG4 clg4(.C_in(C_in), .p(P), .g(G), .C_out(C_out_LCU));
-  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
-  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
-  CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(C_out_LCU[2]), .p_g(P[2]), .g_g(G[2]), .of());
-  CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(C_out_LCU[3]), .p_g(P[3]), .g_g(G[3]), .of());
+  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(), .p_g(P[0]), .g_g(G[0]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(), .p_g(P[1]), .g_g(G[1]), .of());
+  CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(), .p_g(P[2]), .g_g(G[2]), .of());
+  CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(), .p_g(P[3]), .g_g(G[3]), .of());
 endmodule
 
 
@@ -485,8 +485,8 @@ module conv_module
   reg [287:0] weight_36;
   wire [27:0] pe_result_temp;
   reg [7:0] bias;
-  reg [1:0] cnt_3;
-  reg [2:0] cnt_weight, cnt_tdata;
+  reg [1:0] cnt_3, cnt_4_filter;
+  reg [2:0] cnt_tdata;
   reg [3:0] cnt_9;
   reg [4:0] cnt_18;
   reg [5:0] cnt_32, cnt_width, cnt_height;
@@ -499,7 +499,7 @@ module conv_module
   wire [27:0] cla_b;
   reg [31:0] tdata;
 
-  reg go_read_weight, go_compute;
+  reg go_read_weight, go_compute, read_feat_done;
 
   assign F_writedone = f_receive_done;
   assign B_writedone = b_receive_done;
@@ -617,27 +617,13 @@ module conv_module
       w_we <= 1'b0;
       r_we <= 1'b0;
       tdata <= 32'h0;
+      go_read_weight <= 1'b0;
+      read_feat_done <= 1'b0;
     end
     else begin
       case (state)
         STATE_IDLE: begin
-          if (command[2]) begin
-            state <= STATE_SEND_RESULT;
-          end
-          else if (command[1]) begin
-            if (command[0]) begin
-              state <= STATE_COMPUTE;
-              f_bram_en <= 1'b1;
-              w_bram_en <= 1'b1;
-            end
-            else begin
-              state <= STATE_RECEIVE_BIAS;
-              s_axis_tready <= 1'b1;
-              f_bram_en <= 1'b1;
-              f_we <= 1'b1;
-            end
-          end
-          else if (command[0]) begin
+          if (command == 3'b001) begin
             state <= STATE_RECEIVE_FEATURE;
             s_axis_tready <= 1'b1;
             f_bram_en <= 1'b1;
@@ -647,6 +633,9 @@ module conv_module
         STATE_RECEIVE_FEATURE: begin
           if (f_receive_done) begin
             state <= STATE_RECEIVE_BIAS;
+            f_bram_en <= 1'b1;
+            f_we <= 1'b1;
+            s_axis_tready <= 1'b1;
           end
           else begin
             if (S_AXIS_TVALID) begin
@@ -684,11 +673,57 @@ module conv_module
               if (cnt_ch == num_inch-1) begin // 4*(input channel) 만큼 filter를 받음 (receive 9*in_ch번; 36*in_ch개 data)
                 state <= STATE_READ_FEAT;
                 s_axis_tready <= 1'b0;
+                f_bram_en <= 1'b1;
                 w_bram_en <= 1'b0;
                 w_we <= 1'b0;
-                go_read_weight <= 1'b1;
               end
             end
+          end
+        end
+        STATE_READ_FEAT: begin
+          if (read_feat_done || (cnt_height == flen - 1)) begin      
+            f_bram_en <= 1'b0;   
+            read_feat_done <= 1'b0;          
+            if (go_read_weight) begin
+              state <= STATE_READ_WEIGHT;
+              go_read_weight <= 1'b0;
+              w_bram_en <= 1'b1;                     
+            end
+            else begin
+              state <= STATE_COMPUTE;
+              first <= 1'b1;
+            end
+          end          
+        end
+        STATE_READ_WEIGHT: begin
+          if (go_compute) begin
+            state <= STATE_COMPUTE;
+            first <= 1'b1;
+            w_bram_en <= 1'b0;
+            go_compute <= 1'b0;
+            cnt_9 <= 4'h0;
+          end
+        end
+        STATE_COMPUTE: begin
+          if (!pe_en) pe_en <= 1'b1;   // COMPUTE할 거 할당을 COMPUTE에서 하기 때문에 EN도 들어와서 켜줘야 함
+          else if (cnt_18 == 5'd15) begin
+            cnt_width <= cnt_width + 1;
+          end   
+          else if (cnt_18 == 5'd16) begin
+            if (cnt_width == flen - 1) begin
+              cnt_height <= cnt_height + 1;  
+            end
+          end         
+          else if (cnt_18 == 5'd17) begin
+            if (cnt_height == flen - 1 && cnt_width == flen - 1) begin
+              inch_cnt <= inch_cnt + 1;
+              cnt_4_filter <= cnt_4_filter + 1;
+            end
+          end
+          else if (cnt_18 == 5'd18) begin
+            state <= STATE_WRITE_RBRAM;
+            pe_en <= 1'b0;
+            r_bram_en <= 1'b1;
           end
         end
         STATE_READ_BIAS: begin
@@ -697,89 +732,49 @@ module conv_module
             r_bram_en <= 1'b1;
             f_bram_en <= 1'b0;
             r_addr <= 11'h0;
-          end
-        end
-        STATE_COMPUTE: begin
-          pe_en <= 1'b1;   // COMPUTE할 거 할당을 COMPUTE에서 하기 떄문에 EN도 들어와서 켜줘야 함
-          if (cnt_18==5'd17) begin
-            cnt_width <= cnt_width + 1;   
-            state <= STATE_WRITE_RBRAM;
-            pe_en <= 1'b0;
-            r_bram_en <= 1'b1;
-            if (cnt_width == flen - 1) begin
-              cnt_height <= cnt_height + 1;             
-              if (cnt_height == flen -1 && |inch_cnt) begin
-                inch_cnt <= inch_cnt + 1;
-                if (inch_cnt == num_inch - 1) begin
-                  outch_cnt <= outch_cnt + 1;
-                  // if (outch_cnt == num_OUTCH) begin 
-                    
-                  // end
-                end
-              end
-            end    
-          end            
-        end
-        STATE_READ_FEAT: begin
-          if (go_read_weight) begin
-            state <= STATE_READ_WEIGHT;
-            go_read_weight <= 1'b0;
-            w_bram_en <= 1'b1;
-            f_bram_en <= 1'b0;
-          end
-          else begin
-            state <= STATE_COMPUTE;
-            first <= 1'b1;
-            f_bram_en <= 1'b0;
-          end
-        end
-        STATE_READ_WEIGHT: begin
-          if (go_compute) begin
-            state <= STATE_COMPUTE;
-            first <= 1'b1;
-            w_bram_en <= 1'b0;
+            outch_cnt <= outch_cnt + 1;
           end
         end
         STATE_WRITE_RBRAM: begin
           if (r_we) begin
             r_we <= 1'b0;
-            r_bram_en <= 1'b0;            
-            if (cnt_18 == 5'd18) begin 
-              cnt_18 <= 5'd0;
-              if (cnt_width == flen) begin
-                cnt_width <= 5'd0;
-                if (cnt_height == flen) begin
-                  cnt_height <= 5'd00;
-                  r_addr <= 11'h0;
-                  if (inch_cnt == num_inch) begin
-                    inch_cnt <= 9'd0;
-                    state <= STATE_READ_BIAS;
-                    b_addr <= outch_cnt >> 2;
-                    f_bram_en <= 1'b1;
-                    f_addr <= 12'h0;
-                  end
-                  else begin
-                    state <= STATE_READ_FEAT;
-                    f_bram_en <= 1'b1;
-                  end
+            r_bram_en <= 1'b0;  
+            if (cnt_width == flen) begin
+              cnt_width <= 6'd0;
+              if (cnt_height == flen) begin
+                cnt_height <= 5'd00;
+                r_addr <= 11'h0;
+                if (inch_cnt == num_inch) begin
+                  state <= STATE_READ_BIAS;
+                  b_addr <= outch_cnt >> 2;
+                  f_bram_en <= 1'b1;
+                  f_addr <= 12'h0;
+                  inch_cnt <= 9'd0;
                 end
                 else begin
                   state <= STATE_READ_FEAT;
                   f_bram_en <= 1'b1;
-                  r_addr <= next_raddr;
                 end
               end
               else begin
-                state <= STATE_COMPUTE;
-                first <= 1'b1;
-                r_addr <= next_raddr;
+                state <= STATE_READ_FEAT;
+                f_bram_en <= 1'b1;
               end
-            end            
+            end
+            else begin
+              state <= STATE_COMPUTE;
+              pe_en <= 1'b1;
+              first <= 1'b1;
+            end
           end
           else if (~|inch_cnt) begin
+            cnt_18 <= 5'd0;
             r_we <= 1'b1;
           end
-          else if (read_delay [1] && !read_delay[0]) r_we <= 1'b1;
+          else if (read_delay [1] && !read_delay[0]) begin
+            r_we <= 1'b1;
+            cnt_18 <= 5'd0;
+          end          
         end
         STATE_PREPARE_RESULT: begin
           if (cnt_tdata[2]) begin
@@ -787,14 +782,14 @@ module conv_module
             m_axis_tvalid <= 1'b1;
             r_bram_en <= 1'b0;
             cnt_tdata <= 3'b0;
-            if (outch_cnt == num_OUTCH -1) calc_all_done <= 1'b1;
+            if (outch_cnt == num_OUTCH) calc_all_done <= 1'b1;
           end
         end
         STATE_SEND_RESULT: begin
           if (send_done) begin
             state <= STATE_IDLE;
           end
-          else if (cnt_output == flen * flen >> 2 - 1) begin //weight 직육면체 하나에 대해서 계산 끝났을 때           
+          else if (cnt_output == (flen * flen >> 2) - 1) begin //weight 직육면체 하나에 대해서 계산 끝났을 때           
             if (outch_cnt == num_OUTCH) begin
               outch_cnt <= 9'd0;    
               send_done <= 1'b1;     
@@ -802,17 +797,15 @@ module conv_module
               m_axis_tlast <= 1'b1; 
             end
             else begin     
-              if (cnt_weight[0] && cnt_weight[1])   begin
+              if (!outch_cnt[0] && !outch_cnt[1])   begin
                 state <= STATE_RECEIVE_WEIGHT;
                 w_addr <= 12'h000;
                 w_bram_en <= 1'b1;
                 w_we <= 1'b1;
-                s_axis_tready <= 1'b1; 
-                cnt_weight <= 3'b000;  
+                s_axis_tready <= 1'b1;
               end    
               else begin
                 state <= STATE_READ_FEAT;
-                cnt_weight <= cnt_weight + 1;
               end   
               m_axis_tvalid <= 1'b0;
               cnt_output <= 9'h0;                                      
@@ -844,12 +837,12 @@ module conv_module
       cnt_1024 <= 11'h000;
       cnt_32 <= 6'b0;
       cnt_3 <= 2'b0;
-      cnt_weight <= 3'b0;
       cnt_tdata <= 3'b0;
       cnt_output <= 9'h0;
       cnt_height <= 6'h0;
       cnt_width <= 6'h0;
-      inch_cnt <= 9'h001;
+      cnt_4_filter <= 3'b0;
+      inch_cnt <= 9'h000;
       outch_cnt <= 9'h0;
       weight_36 <= 288'h0;
       cnt_row <= 6'b0;
@@ -900,7 +893,7 @@ module conv_module
           end
         end
         STATE_RECEIVE_BIAS: begin
-          if (S_AXIS_TVALID) begin
+          if (!b_receive_done && S_AXIS_TVALID) begin
             if (cnt_ch == (num_outch>>2)-1) begin
               b_addr <= 7'b0;
               cnt_ch <= 7'b0;
@@ -930,64 +923,29 @@ module conv_module
             end
           end
         end
-        STATE_READ_BIAS: begin
-          if (read_delay[1]) begin
-            case (outch_cnt)  
-              2'b00: begin //outch_cnt는 맨 처음에도 1인 상태로 들어오므로 여기가 마지막
-                bias <= f_dout[7:0]; //마지막이 [31:24] 인지 [7:0] 인지 확인 필요
-              end
-              2'b01: begin //outch_cnt는 맨 처음에도 1인 상태로 들어오므로 여기가 첫 번째
-                bias <= f_dout[31:24];
-              end
-              2'b10: begin
-                bias <= f_dout[23:16];
-              end
-              2'b11: begin
-                bias <= f_dout[15:8];
-              end
-            endcase
-            read_delay <= 2'b00;
-          end
-          else read_delay <= read_delay + 1;
-        end
-        STATE_COMPUTE: begin
-          if (cnt_18 == 5'd0) begin
-            feat <= {feat_3[0][271 - cnt_width*8 -:24],feat_3[0][271 - cnt_width*8 -:24],feat_3[0][271 - cnt_width*8 -:24]};
-            if (cnt_weight[1] && cnt_weight[0]) weight <= weight_36[71:0];
-            else if (cnt_weight[1]) weight <= weight_36[143:72];
-            else if (cnt_weight[0]) weight <= weight_36[215:144];
-            else weight <= weight_36[287:216];
-            cnt_18 <= cnt_18 + 1;
-          end
-          else begin
-            if (first) first <= 1'b0;
-            cnt_18 <= cnt_18 + 1;
-            feat <= feat << 8;
-            weight <= feat << 8;
-          end
-        end
         STATE_READ_FEAT: begin
           if (~|cnt_height) begin  // 첫 번째 줄 읽을 때 
             feat_3[0] <= 272'h0;
-            if (cnt_9 == flen>>2) begin 
+            if (cnt_9 == (flen>>2)) begin 
               cnt_9 <= 4'h0;
               if (cnt_3[0]) begin //세 번째 줄 읽을 때
                 cnt_3 <= 2'b00;                
                 if (flen[5]) feat_3[2] <= {8'h00,feat_temp,8'h00};
-                else if (flen[4]) feat_3[2][271:128] <= {8'h00,feat_temp,8'h00};
-                else if (flen[3]) feat_3[2][271:192] <={8'h00,feat_temp,8'h00};
-                else feat_3[2][271:224] <= {8'h00,feat_temp,8'h00};
-                if (!cnt_weight[1] && !cnt_weight[0]) go_read_weight <= 1'b1; //0일 때 처음 들어오고 4번에 한 번씩 읽어야 하니까
-                cnt_height <= 5'h0;
+                else if (flen[4]) feat_3[2][271:128] <= {8'h00,feat_temp[127:0],8'h00};
+                else if (flen[3]) feat_3[2][271:192] <={8'h00,feat_temp[63:0],8'h00};
+                else feat_3[2][271:224] <= {8'h00,feat_temp[31:0],8'h00};
+                if (!cnt_4_filter[1] && !cnt_4_filter[0]) begin //0일 때 처음 들어오고 4번에 한 번씩 읽어야 하니까
+                  go_read_weight <= 1'b1;                   
+                end
+                read_feat_done <= 1'b1;
               end
               else begin //두 번째 줄 읽을 때
                 cnt_3 <= 2'b01;
                 if (flen[5]) feat_3[1] <= {8'h00,feat_temp,8'h00};
-                else if (flen[4]) feat_3[1][271:128] <= {8'h00,feat_temp,8'h00};
-                else if (flen[3]) feat_3[1][271:192] <={8'h00,feat_temp,8'h00};
-                else feat_3[1][271:224] <= {8'h00,feat_temp,8'h00};
+                else if (flen[4]) feat_3[1][271:128] <= {8'h00,feat_temp[127:0],8'h00};
+                else if (flen[3]) feat_3[1][271:192] <={8'h00,feat_temp[63:0],8'h00};
+                else feat_3[1][271:224] <= {8'h00,feat_temp[31:0],8'h00};
               end
-
             end
             else begin              
               if (read_delay[1]) begin
@@ -1007,17 +965,18 @@ module conv_module
           else if (cnt_height == flen-1) begin //마지막 줄 읽을 때 
             feat_3[0] <= feat_3[1];
             feat_3[1] <= feat_3[2];
-            feat_3[2] <= 272'h0;      
+            feat_3[2] <= 272'h0; 
           end
           else begin  //마지막도 아니고 첫 번째도 아닌 줄
-            if (cnt_9 == flen>>2) begin 
+            if (cnt_9 == (flen>>2) ) begin 
               cnt_9 <= 4'h0;
               feat_3[0] <= feat_3[1];
               feat_3[1] <= feat_3[2];
               if (flen[5]) feat_3[1] <= {8'h00,feat_temp,8'h00};
-              else if (flen[4]) feat_3[2][271:128] <= {8'h00,feat_temp,8'h00};
-              else if (flen[3]) feat_3[2][271:192] <={8'h00,feat_temp,8'h00};
-              else feat_3[2][271:224] <= {8'h00,feat_temp,8'h00};
+              else if (flen[4]) feat_3[2][271:128] <= {8'h00,feat_temp[127:0],8'h00};
+              else if (flen[3]) feat_3[2][271:192] <={8'h00,feat_temp[63:0],8'h00};
+              else feat_3[2][271:224] <= {8'h00,feat_temp[31:0],8'h00};
+              read_feat_done <= 1'b1;
             end
             else begin              
               if (read_delay[1]) begin
@@ -1036,20 +995,15 @@ module conv_module
           end
         end
         STATE_READ_WEIGHT: begin
-          if (cnt_9[3] && cnt_9[0]) begin //9됐을 때
-            go_compute <= 1'b1;   
-            cnt_9 <= 4'h0;        
+          if (cnt_9[3]) begin 
+            go_compute <= 1'b1;  
           end
           else begin
             if (read_delay[1]) begin
-              //if (num_inch[1]&& num_inch[0]) begin
-              //end
-              //else begin
-                w_addr <= next_waddr;
-                weight_36[31:0] <= {w_dout[7:0],w_dout[15:8], w_dout[23:16], w_dout[31:24]};
-                read_delay <= 2'b00;
-                cnt_9 <= cnt_9 +1;
-              //end              
+              w_addr <= next_waddr;
+              weight_36[31:0] <= {w_dout[7:0],w_dout[15:8], w_dout[23:16], w_dout[31:24]};
+              read_delay <= 2'b00;
+              cnt_9 <= cnt_9 + 1;
             end
             else if (read_delay[0]) begin
               read_delay <= read_delay +1;
@@ -1059,12 +1013,25 @@ module conv_module
               read_delay <= read_delay + 1;
             end
           end
+        end        
+        STATE_COMPUTE: begin
+          if (cnt_18 == 5'd0) begin
+            feat <= {feat_3[0][271 - cnt_width*8 -:24],feat_3[1][271 - cnt_width*8 -:24],feat_3[2][271 - cnt_width*8 -:24]};
+            if (cnt_4_filter[1] && cnt_4_filter[0]) weight <= weight_36[71:0];
+            else if (cnt_4_filter[1]) weight <= weight_36[143:72];
+            else if (cnt_4_filter[0]) weight <= weight_36[215:144];
+            else weight <= weight_36[287:216];
+            cnt_18 <= cnt_18 + 1;
+          end
+          else begin
+            if (first) first <= 1'b0;
+            cnt_18 <= cnt_18 + 1;
+            feat <= feat << 8;
+            weight <= weight << 8;
+          end
         end
         STATE_WRITE_RBRAM: begin
-          if (~|inch_cnt) begin //
-            if (cnt_height == flen -1 && cnt_width == flen-1) begin
-              inch_cnt <= inch_cnt + 1; //맨 처음만 여기서 더함
-            end
+          if (~|inch_cnt) begin 
             partial_result <= {{4{pe_result_temp[27]}},pe_result_temp};
           end
           else begin
@@ -1075,6 +1042,26 @@ module conv_module
             end
             else read_delay <= read_delay + 1; 
           end
+        end
+        STATE_READ_BIAS: begin
+          if (read_delay[1]) begin
+            case (outch_cnt[1:0])  
+              2'b00: begin //outch_cnt는 맨 처음에도 1인 상태로 들어오므로 여기가 마지막
+                bias <= f_dout[7:0]; //마지막이 [31:24] 인지 [7:0] 인지 확인 필요
+              end
+              2'b01: begin //outch_cnt는 맨 처음에도 1인 상태로 들어오므로 여기가 첫 번째
+                bias <= f_dout[31:24];
+              end
+              2'b10: begin
+                bias <= f_dout[23:16];
+              end
+              2'b11: begin
+                bias <= f_dout[15:8];
+              end
+            endcase
+            read_delay <= 2'b00;
+          end
+          else read_delay <= read_delay + 1;
         end
         STATE_PREPARE_RESULT: begin
           if (read_delay[1] && !read_delay[0]) begin
