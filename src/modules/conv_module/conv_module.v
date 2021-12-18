@@ -714,7 +714,7 @@ module conv_module
             cnt_width <= cnt_width + 1;
           end   
           else if (cnt_18 == 5'd16) begin
-            if (cnt_width == flen ) begin
+            if (cnt_width == flen) begin
               cnt_height <= cnt_height + 1;  
             end
           end         
@@ -811,6 +811,7 @@ module conv_module
               end    
               else begin
                 state <= STATE_READ_FEAT;
+                f_bram_en <= 1'b1;
               end   
               m_axis_tvalid <= 1'b0;
               cnt_output <= 9'h0;                                      
