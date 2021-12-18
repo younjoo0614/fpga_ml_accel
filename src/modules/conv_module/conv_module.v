@@ -499,7 +499,7 @@ module conv_module
   wire [27:0] cla_b;
   reg [31:0] tdata;
 
-  reg go_read_weight, go_compute, read_feat_done;
+  reg go_read_weight, read_feat_done;
 
   assign F_writedone = f_receive_done;
   assign B_writedone = b_receive_done;
@@ -675,8 +675,8 @@ module conv_module
         end
         STATE_RECEIVE_WEIGHT: begin
           if (S_AXIS_TVALID) begin
-            if (cnt_filter[2]) begin // 4개의 filter 받을 때 마다 (receive 9번; 36개 data)
-              if (cnt_ch == num_inch-1) begin // 4*(input channel) 만큼 filter를 받음 (receive 9*in_ch번; 36*in_ch개 data)
+            if (cnt_9[3]) begin // 4개의 filter 받을 때 마다 (receive 9번; 36개 data)
+              if (cnt_ch == num_inch - 1) begin // 4*(input channel) 만큼 filter를 받음 (receive 9*in_ch번; 36*in_ch개 data)
                 state <= STATE_READ_FEAT;
                 s_axis_tready <= 1'b0;
                 f_bram_en <= 1'b1;
@@ -706,7 +706,6 @@ module conv_module
             state <= STATE_COMPUTE;
             first <= 1'b1;
             w_bram_en <= 1'b0;
-            go_compute <= 1'b0;
           end
         end
         STATE_COMPUTE: begin
@@ -911,9 +910,9 @@ module conv_module
         end
         STATE_RECEIVE_WEIGHT: begin
           if (S_AXIS_TVALID) begin
-            if (cnt_filter[2]) begin // 4개의 filter 받을 때 마다 (receive 9번; 36개 data)
-              cnt_filter <= 3'b0;
-              if (cnt_ch == num_inch-1) begin // 4*(input channel) 만큼 filter를 받음 (receive 9*in_ch번; 36*in_ch개 data)
+            if (cnt_9[3]) begin // 4개의 filter 받을 때 마다 (receive 9번; 36개 data)
+              cnt_9 <= 4'b0;
+              if (cnt_ch == num_inch - 1) begin // 4*(input channel) 만큼 filter를 받음 (receive 9*in_ch번; 36*in_ch개 data)
                 w_addr <= 10'b0;
                 cnt_ch <= 7'b0;
               end
@@ -924,7 +923,7 @@ module conv_module
             end
             else begin
               w_addr <= next_waddr[9:0];
-              cnt_filter <= cnt_filter + 1;
+              cnt_9 <= cnt_9 + 1;
             end
           end
         end
