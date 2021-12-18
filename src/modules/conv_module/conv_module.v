@@ -593,7 +593,7 @@ module conv_module
 
   CLA_28Bit bias_adder (
     .A(r_dout[27:0]),
-    .B({{14{bias[7]}},bias,6'h00}),
+    .B({{14{bias[7]}},bias,6'h0}),
     .C_in(1'b0),
     .S(partial_data),
     .C_out()
@@ -760,7 +760,6 @@ module conv_module
             end
             else begin
               state <= STATE_COMPUTE;
-              pe_en <= 1'b1;
               first <= 1'b1;
             end
           end
@@ -786,7 +785,6 @@ module conv_module
           if (cnt_tdata[2] && read_delay[1] && read_delay[0]) begin
             state <= STATE_SEND_RESULT;
             m_axis_tvalid <= 1'b1;
-            r_bram_en <= 1'b0;
             if (outch_cnt == num_OUTCH) calc_all_done <= 1'b1;
           end
         end
@@ -1096,8 +1094,9 @@ module conv_module
                 tdata[31:24] <= partial_data[27] ? (8'b0000_0000) : 
                           ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);                 
                 r_addr <= next_raddr;
+                r_bram_en <= 1'b0;
               end
-              3'b100 : begin
+              3'b100: begin
                 m_axis_tdata <= tdata;
                 cnt_tdata <= 3'b000;
               end
