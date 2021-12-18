@@ -702,12 +702,11 @@ module conv_module
           end          
         end
         STATE_READ_WEIGHT: begin
-          if (go_compute) begin
+          if (cnt_9[3] && cnt_9[0]) begin
             state <= STATE_COMPUTE;
             first <= 1'b1;
             w_bram_en <= 1'b0;
             go_compute <= 1'b0;
-            cnt_9 <= 4'h0;
           end
         end
         STATE_COMPUTE: begin
@@ -1001,8 +1000,8 @@ module conv_module
           end
         end
         STATE_READ_WEIGHT: begin
-          if (cnt_9[3]) begin 
-            go_compute <= 1'b1;  
+          if (cnt_9[3] && cnt_9[0]) begin 
+            cnt_9 <= 4'h0;
           end
           else begin
             if (read_delay[1]) begin
@@ -1095,6 +1094,7 @@ module conv_module
               end
               3'b100 : begin
                 m_axis_tdata <= tdata;
+                read_delay <= 2'b00;
               end
             endcase            
           end
