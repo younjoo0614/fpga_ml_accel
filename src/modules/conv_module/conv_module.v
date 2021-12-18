@@ -767,6 +767,10 @@ module conv_module
             cnt_18 <= 5'd0;
             r_we <= 1'b1;
           end
+          else if (cnt_height == flen && cnt_width == flen && inch_cnt ==9'd1) begin
+            r_we <= 1'b1;
+            cnt_18 <= 5'd0;
+          end
           else if (read_delay [1] && read_delay[0]) begin
             r_we <= 1'b1;
             cnt_18 <= 5'd0;
@@ -1038,6 +1042,9 @@ module conv_module
         end
         STATE_WRITE_RBRAM: begin
           if (~|inch_cnt) begin 
+            partial_result <= {{4{pe_result_temp[27]}},pe_result_temp};
+          end
+          else if (cnt_height == flen && cnt_width == flen && inch_cnt ==9'd1) begin
             partial_result <= {{4{pe_result_temp[27]}},pe_result_temp};
           end
           else begin
