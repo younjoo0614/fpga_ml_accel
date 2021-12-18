@@ -714,12 +714,12 @@ module conv_module
             cnt_width <= cnt_width + 1;
           end   
           else if (cnt_18 == 5'd16) begin
-            if (cnt_width == flen - 1) begin
+            if (cnt_width == flen ) begin
               cnt_height <= cnt_height + 1;  
             end
           end         
           else if (cnt_18 == 5'd17) begin
-            if (cnt_height == flen - 1 && cnt_width == flen - 1) begin
+            if (cnt_height == flen && cnt_width == flen) begin
               inch_cnt <= inch_cnt + 1;
               cnt_4_filter <= cnt_4_filter + 1;
             end
@@ -732,8 +732,10 @@ module conv_module
         end
         STATE_WRITE_RBRAM: begin
           if (r_we) begin
+            r_addr <= next_raddr;
             r_we <= 1'b0;
             r_bram_en <= 1'b0;  
+            read_delay <= 2'b00;
             if (cnt_width == flen) begin
               cnt_width <= 6'd0;
               if (cnt_height == flen) begin
@@ -766,7 +768,7 @@ module conv_module
             cnt_18 <= 5'd0;
             r_we <= 1'b1;
           end
-          else if (read_delay [1] && !read_delay[0]) begin
+          else if (read_delay [1] && read_delay[0]) begin
             r_we <= 1'b1;
             cnt_18 <= 5'd0;
           end          
@@ -785,7 +787,6 @@ module conv_module
             state <= STATE_SEND_RESULT;
             m_axis_tvalid <= 1'b1;
             r_bram_en <= 1'b0;
-            cnt_tdata <= 3'b0;
             if (outch_cnt == num_OUTCH) calc_all_done <= 1'b1;
           end
         end
@@ -928,75 +929,77 @@ module conv_module
           end
         end
         STATE_READ_FEAT: begin
-          if (~|cnt_height) begin  // 첫 번째 줄 읽을 때 
-            feat_3[0] <= 272'h0;
-            if (cnt_9 == (flen>>2)) begin 
-              cnt_9 <= 4'h0;
-              if (cnt_3[0]) begin //세 번째 줄 읽을 때
-                cnt_3 <= 2'b00;                
-                if (flen[5]) feat_3[2] <= {8'h00,feat_temp,8'h00};
+          if (!read_feat_done) begin
+            if (~|cnt_height) begin  // 첫 번째 줄 읽을 때 
+              feat_3[0] <= 272'h0;
+              if (cnt_9 == (flen>>2)) begin 
+                cnt_9 <= 4'h0;
+                if (cnt_3[0]) begin //세 번째 줄 읽을 때
+                  cnt_3 <= 2'b00;                
+                  if (flen[5]) feat_3[2] <= {8'h00,feat_temp,8'h00};
+                  else if (flen[4]) feat_3[2][271:128] <= {8'h00,feat_temp[127:0],8'h00};
+                  else if (flen[3]) feat_3[2][271:192] <={8'h00,feat_temp[63:0],8'h00};
+                  else feat_3[2][271:224] <= {8'h00,feat_temp[31:0],8'h00};
+                  if (!cnt_4_filter[1] && !cnt_4_filter[0]) begin //0일 때 처음 들어오고 4번에 한 번씩 읽어야 하니까
+                    go_read_weight <= 1'b1;                   
+                  end
+                  read_feat_done <= 1'b1;
+                end
+                else begin //두 번째 줄 읽을 때
+                  cnt_3 <= 2'b01;
+                  if (flen[5]) feat_3[1] <= {8'h00,feat_temp,8'h00};
+                  else if (flen[4]) feat_3[1][271:128] <= {8'h00,feat_temp[127:0],8'h00};
+                  else if (flen[3]) feat_3[1][271:192] <={8'h00,feat_temp[63:0],8'h00};
+                  else feat_3[1][271:224] <= {8'h00,feat_temp[31:0],8'h00};
+                end
+              end
+              else begin              
+                if (read_delay[1]) begin
+                  feat_temp[31:0] <= {f_dout[7:0], f_dout[15:8], f_dout[23:16], f_dout[31:24]};
+                  cnt_9 <= cnt_9 + 1;
+                  read_delay <= 2'b00;
+                  f_addr <= next_faddr[10:0];
+                end
+                else begin 
+                  read_delay <= read_delay +1;
+                  if (read_delay[0])begin
+                    feat_temp <= feat_temp << 32;
+                  end
+                end
+              end
+            end
+            else if (cnt_height == flen-1) begin //마지막 줄 읽을 때 
+              feat_3[0] <= feat_3[1];
+              feat_3[1] <= feat_3[2];
+              feat_3[2] <= 272'h0; 
+            end
+            else begin  //마지막도 아니고 첫 번째도 아닌 줄
+              if (cnt_9 == (flen>>2) ) begin 
+                cnt_9 <= 4'h0;
+                feat_3[0] <= feat_3[1];
+                feat_3[1] <= feat_3[2];
+                if (flen[5]) feat_3[1] <= {8'h00,feat_temp,8'h00};
                 else if (flen[4]) feat_3[2][271:128] <= {8'h00,feat_temp[127:0],8'h00};
                 else if (flen[3]) feat_3[2][271:192] <={8'h00,feat_temp[63:0],8'h00};
                 else feat_3[2][271:224] <= {8'h00,feat_temp[31:0],8'h00};
-                if (!cnt_4_filter[1] && !cnt_4_filter[0]) begin //0일 때 처음 들어오고 4번에 한 번씩 읽어야 하니까
-                  go_read_weight <= 1'b1;                   
-                end
                 read_feat_done <= 1'b1;
               end
-              else begin //두 번째 줄 읽을 때
-                cnt_3 <= 2'b01;
-                if (flen[5]) feat_3[1] <= {8'h00,feat_temp,8'h00};
-                else if (flen[4]) feat_3[1][271:128] <= {8'h00,feat_temp[127:0],8'h00};
-                else if (flen[3]) feat_3[1][271:192] <={8'h00,feat_temp[63:0],8'h00};
-                else feat_3[1][271:224] <= {8'h00,feat_temp[31:0],8'h00};
-              end
-            end
-            else begin              
-              if (read_delay[1]) begin
-                feat_temp[31:0] <= {f_dout[7:0], f_dout[15:8], f_dout[23:16], f_dout[31:24]};
-                cnt_9 <= cnt_9 + 1;
-                read_delay <= 2'b00;
-                f_addr <= next_faddr[10:0];
-              end
-              else begin 
-                read_delay <= read_delay +1;
-                if (read_delay[0])begin
-                  feat_temp <= feat_temp << 32;
+              else begin              
+                if (read_delay[1]) begin
+                  feat_temp[31:0] <= {f_dout[7:0], f_dout[15:8], f_dout[23:16], f_dout[31:24]};
+                  cnt_9 <= cnt_9 + 1;
+                  read_delay <= 2'b00;
+                  f_addr <= next_faddr[10:0];
+                end
+                else begin
+                  read_delay <= read_delay +1;
+                  if (read_delay[0])begin
+                    feat_temp <= feat_temp << 32;
+                  end
                 end
               end
             end
-          end
-          else if (cnt_height == flen-1) begin //마지막 줄 읽을 때 
-            feat_3[0] <= feat_3[1];
-            feat_3[1] <= feat_3[2];
-            feat_3[2] <= 272'h0; 
-          end
-          else begin  //마지막도 아니고 첫 번째도 아닌 줄
-            if (cnt_9 == (flen>>2) ) begin 
-              cnt_9 <= 4'h0;
-              feat_3[0] <= feat_3[1];
-              feat_3[1] <= feat_3[2];
-              if (flen[5]) feat_3[1] <= {8'h00,feat_temp,8'h00};
-              else if (flen[4]) feat_3[2][271:128] <= {8'h00,feat_temp[127:0],8'h00};
-              else if (flen[3]) feat_3[2][271:192] <={8'h00,feat_temp[63:0],8'h00};
-              else feat_3[2][271:224] <= {8'h00,feat_temp[31:0],8'h00};
-              read_feat_done <= 1'b1;
-            end
-            else begin              
-              if (read_delay[1]) begin
-                feat_temp[31:0] <= {f_dout[7:0], f_dout[15:8], f_dout[23:16], f_dout[31:24]};
-                cnt_9 <= cnt_9 + 1;
-                read_delay <= 2'b00;
-                f_addr <= next_faddr[10:0];
-              end
-              else begin
-                read_delay <= read_delay +1;
-                if (read_delay[0])begin
-                  feat_temp <= feat_temp << 32;
-                end
-              end
-            end
-          end
+          end          
         end
         STATE_READ_WEIGHT: begin
           if (cnt_9[3] && cnt_9[0]) begin 
@@ -1041,8 +1044,6 @@ module conv_module
           else begin
             if (read_delay[1] && read_delay[0]) begin
               partial_result <= {{4{new_added[27]}},new_added};
-              read_delay <= 2'b00;
-              r_addr <= next_raddr;
             end
             else read_delay <= read_delay + 1; 
           end
@@ -1073,33 +1074,40 @@ module conv_module
           end
           else if (read_delay[1] && read_delay[0]) begin
             cnt_tdata <= cnt_tdata +1;
-            r_addr <= next_raddr;
             read_delay <= 2'b00;
             case (cnt_tdata)
               3'b000: begin
                 tdata[7:0] <=partial_data[27] ? (8'b0000_0000) : 
-                          ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);               end
+                          ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);               
+                r_addr <= next_raddr;
+              end
               3'b001: begin
                 tdata[15:8] <= partial_data[27] ? (8'b0000_0000) : 
                           ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);                 
+                r_addr <= next_raddr;
               end
               3'b010: begin
                 tdata[23:16] <=partial_data[27] ? (8'b0000_0000) : 
                           ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);                 
+                r_addr <= next_raddr;
               end
               3'b011: begin
                 tdata[31:24] <= partial_data[27] ? (8'b0000_0000) : 
                           ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);                 
+                r_addr <= next_raddr;
               end
               3'b100 : begin
                 m_axis_tdata <= tdata;
+                cnt_tdata <= 3'b000;
               end
             endcase            
           end
           else read_delay <= read_delay + 1;
         end
         STATE_SEND_RESULT: begin
-          
+          if (cnt_output == (flen * flen >> 2) - 1) begin
+            r_addr <= 11'h0;
+          end
         end
       endcase
     end
