@@ -730,15 +730,6 @@ module conv_module
             r_bram_en <= 1'b1;
           end
         end
-        STATE_READ_BIAS: begin
-          if (read_delay[1]) begin
-            state <= STATE_PREPARE_RESULT;
-            r_bram_en <= 1'b1;
-            f_bram_en <= 1'b0;
-            r_addr <= 11'h0;
-            outch_cnt <= outch_cnt + 1;
-          end
-        end
         STATE_WRITE_RBRAM: begin
           if (r_we) begin
             r_we <= 1'b0;
@@ -780,8 +771,17 @@ module conv_module
             cnt_18 <= 5'd0;
           end          
         end
+        STATE_READ_BIAS: begin
+          if (read_delay[1]) begin
+            state <= STATE_PREPARE_RESULT;
+            r_bram_en <= 1'b1;
+            f_bram_en <= 1'b0;
+            r_addr <= 11'h0;
+            outch_cnt <= outch_cnt + 1;
+          end
+        end
         STATE_PREPARE_RESULT: begin
-          if (cnt_tdata[2]) begin
+          if (cnt_tdata[2] && read_delay[1] && read_delay[0]) begin
             state <= STATE_SEND_RESULT;
             m_axis_tvalid <= 1'b1;
             r_bram_en <= 1'b0;
@@ -1039,7 +1039,7 @@ module conv_module
             partial_result <= {{4{pe_result_temp[27]}},pe_result_temp};
           end
           else begin
-            if (read_delay[1]) begin
+            if (read_delay[1] && read_delay[0]) begin
               partial_result <= {{4{new_added[27]}},new_added};
               read_delay <= 2'b00;
               r_addr <= next_raddr;
@@ -1054,13 +1054,13 @@ module conv_module
                 bias <= f_dout[7:0]; //마지막이 [31:24] 인지 [7:0] 인지 확인 필요
               end
               2'b01: begin //outch_cnt는 맨 처음에도 1인 상태로 들어오므로 여기가 첫 번째
-                bias <= f_dout[31:24];
+                bias <= f_dout[15:8];
               end
               2'b10: begin
                 bias <= f_dout[23:16];
               end
               2'b11: begin
-                bias <= f_dout[15:8];
+                bias <= f_dout[31:24];
               end
             endcase
             read_delay <= 2'b00;
@@ -1069,31 +1069,30 @@ module conv_module
         end
         STATE_PREPARE_RESULT: begin
           if (read_delay[1] && !read_delay[0]) begin
-            read_delay <= 2'b11;
-            r_addr <= next_raddr;
+            read_delay <= 2'b11;            
           end
           else if (read_delay[1] && read_delay[0]) begin
             cnt_tdata <= cnt_tdata +1;
+            r_addr <= next_raddr;
+            read_delay <= 2'b00;
             case (cnt_tdata)
               3'b000: begin
                 tdata[7:0] <=partial_data[27] ? (8'b0000_0000) : 
-                          ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111); 
-              end
+                          ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);               end
               3'b001: begin
                 tdata[15:8] <= partial_data[27] ? (8'b0000_0000) : 
-                          ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111); 
+                          ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);                 
               end
               3'b010: begin
                 tdata[23:16] <=partial_data[27] ? (8'b0000_0000) : 
-                          ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111); 
+                          ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);                 
               end
               3'b011: begin
                 tdata[31:24] <= partial_data[27] ? (8'b0000_0000) : 
-                          ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111); 
+                          ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);                 
               end
               3'b100 : begin
                 m_axis_tdata <= tdata;
-                read_delay <= 2'b00;
               end
             endcase            
           end
