@@ -639,12 +639,18 @@ module conv_module
           end
           else begin
             if (S_AXIS_TVALID) begin
-              if ((cnt_col == (flen>>2)-1) && (cnt_row == flen-1) && (cnt_ch == num_inch-1)) begin
+              if (next_faddr[11:0] == flen*flen*num_inch>>2) begin
                 s_axis_tready <= 1'b0;
                 f_bram_en <= 1'b0;
                 f_we <= 1'b0;
                 f_receive_done <= 1'b1;
               end
+              // if ((cnt_col == (flen>>2)-1) && (cnt_row == flen-1) && (cnt_ch == num_inch-1)) begin
+                // s_axis_tready <= 1'b0;
+                // f_bram_en <= 1'b0;
+                // f_we <= 1'b0;
+                // f_receive_done <= 1'b1;
+              // end
             end
           end
         end
