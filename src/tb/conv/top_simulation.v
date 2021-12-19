@@ -529,6 +529,7 @@ module top_simulation
       .F_writedone(F_writedone),
       .B_writedone(B_writedone),
       .RDY_TO_SEND(rdy_to_transmit),
+      .Flen(FLength),
       .SEND_DONE(transmit_done)
     );
         
