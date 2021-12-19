@@ -21,8 +21,8 @@ module pool_apb
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
 
-    output reg[5:0] flen,
-    output reg[8:0] inch
+    output reg [5:0] Flen,
+    output reg [8:0] num_INCH
   );
   
   wire state_enable;
@@ -45,8 +45,7 @@ module pool_apb
         case ({PADDR[31:2], 2'h0})
           /*READOUT*/
           32'h00000000 : prdata_reg <= {31'h0,pool_start};
-          32'h00000004 : prdata_reg <= {31'd0,pool_done};
-          32'h00000008 : prdata_reg <= clk_counter;
+          32'h00000008 : prdata_reg <= {31'd0,pool_done};
           default: prdata_reg <= 32'h0;
         endcase
       end
@@ -72,10 +71,10 @@ module pool_apb
             pool_start <= PWDATA[0];
           end
           32'h00000004: begin
-            flen <= PWDATA;
+            Flen <= PWDATA;
           end
           32'h0000000c: begin
-            inch <= PWDATA;
+            num_INCH <= PWDATA;
           end
           default: ;
         endcase

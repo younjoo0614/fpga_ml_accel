@@ -21,13 +21,13 @@ module CLA_28Bit (
 
   CLG4 clg4(.C_in(C_in), .p(P[3:0]), .g(G[3:0]), .C_out(C_out_LCU[3:0]));
   CLG3 clg3(.C_in(C_out_LCU[3]),.p(P[6:4]), .g(G[6:4]), .C_out(C_out_LCU[6:4]));
-  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
-  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
-  CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(C_out_LCU[2]), .p_g(P[2]), .g_g(G[2]), .of());
-  CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(C_out_LCU[3]), .p_g(P[3]), .g_g(G[3]), .of());
-  CLA4 cla4_4(.a(A_1[19:16]), .b(B[19:16]), .C_in(C_out_LCU[3]), .s(S[19:16]), .C_out(C_out_LCU[4]), .p_g(P[4]), .g_g(G[4]), .of());
-  CLA4 cla4_5(.a(A_1[23:20]), .b(B[23:20]), .C_in(C_out_LCU[4]), .s(S[23:20]), .C_out(C_out_LCU[5]), .p_g(P[5]), .g_g(G[5]), .of());
-  CLA4 cla4_6(.a(A_1[27:24]), .b(B[27:24]), .C_in(C_out_LCU[5]), .s(S[27:24]), .C_out(C_out_LCU[6]), .p_g(P[6]), .g_g(G[6]), .of());
+  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(), .p_g(P[0]), .g_g(G[0]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(), .p_g(P[1]), .g_g(G[1]), .of());
+  CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(), .p_g(P[2]), .g_g(G[2]), .of());
+  CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(), .p_g(P[3]), .g_g(G[3]), .of());
+  CLA4 cla4_4(.a(A_1[19:16]), .b(B[19:16]), .C_in(C_out_LCU[3]), .s(S[19:16]), .C_out(), .p_g(P[4]), .g_g(G[4]), .of());
+  CLA4 cla4_5(.a(A_1[23:20]), .b(B[23:20]), .C_in(C_out_LCU[4]), .s(S[23:20]), .C_out(), .p_g(P[5]), .g_g(G[5]), .of());
+  CLA4 cla4_6(.a(A_1[27:24]), .b(B[27:24]), .C_in(C_out_LCU[5]), .s(S[27:24]), .C_out(), .p_g(P[6]), .g_g(G[6]), .of());
 
 endmodule
 
@@ -49,10 +49,10 @@ module CLA_16Bit (
   assign C_out = C_in ? ~C_out_LCU[3] : C_out_LCU[3];
 
   CLG4 clg4(.C_in(C_in), .p(P), .g(G), .C_out(C_out_LCU));
-  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
-  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
-  CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(C_out_LCU[2]), .p_g(P[2]), .g_g(G[2]), .of());
-  CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(C_out_LCU[3]), .p_g(P[3]), .g_g(G[3]), .of());
+  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(C_in), .s(S[3:0]), .C_out(), .p_g(P[0]), .g_g(G[0]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(), .p_g(P[1]), .g_g(G[1]), .of());
+  CLA4 cla4_2(.a(A_1[11:8]), .b(B[11:8]), .C_in(C_out_LCU[1]), .s(S[11:8]), .C_out(), .p_g(P[2]), .g_g(G[2]), .of());
+  CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(), .p_g(P[3]), .g_g(G[3]), .of());
 endmodule
 
 module COMP_8Bit(
@@ -73,8 +73,8 @@ module COMP_8Bit(
   assign A_1 = ~A;
 
   CLG2 clg2(.C_in(1'b1), .p(P), .g(G), .C_out(C_out_LCU));
-  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(1'b1), .s(S[3:0]), .C_out(C_out_LCU[0]), .p_g(P[0]), .g_g(G[0]), .of());
-  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(C_out_LCU[1]), .p_g(P[1]), .g_g(G[1]), .of());
+  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(1'b1), .s(S[3:0]), .C_out(), .p_g(P[0]), .g_g(G[0]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(), .p_g(P[1]), .g_g(G[1]), .of());
 endmodule
 
 module CLG4
@@ -790,6 +790,7 @@ module fc_module
         end
 
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
+          m_axis_tvalid <= 1'b0;
           if (S_AXIS_TVALID) begin
             if (next_cnt[10:0] == feat_size>>2) begin
               if (column_cnt == bias_size - 1) begin
@@ -1298,7 +1299,7 @@ module fc_module
               bias_add_result2 <= bias_add_result;
               pe_delay <= pe_delay + 1;
             end
-            else if (pe_delay[0] &&pe_delay[1]) begin
+            else if (pe_delay[0] && pe_delay[1]) begin
               pe_result <= pe_result4_temp;
               bias_temp <= {{15{bias[31]}},bias[30:24], {6{1'b0}}};              
               bias_add_result3 <= bias_add_result;
@@ -1339,6 +1340,7 @@ module fc_module
           //max_index 가 0~9가 아닌 1~10을 출력해야함
           delay <= delay + 1;
           m_axis_tdata <= tdata; // tb test 용.
+
           if (|bias_size[1:0]) begin
             case (delay)
               2'b00: begin
@@ -1346,24 +1348,29 @@ module fc_module
                   max_idx <= 4*(b_addr[1:0]-1)+1;
                   max_value <= tdata[7:0];
                 end
+                delay <= delay + 1;
               end
               2'b01: begin
                 if (!max_comp2) begin
                   max_idx <= 4*(b_addr[1:0]-1)+2;
                   max_value <= tdata[15:8];
                 end
+                delay <= delay + 1;
               end
               2'b10: begin
                 if (!max_comp3) begin
                   max_idx <= 4*(b_addr[1:0]-1)+3;
                   max_value <= tdata[23:16];
                 end
+                if (b_addr[8:0]==(bias_size>>2) + 1) delay <= 2'b00;
+                else delay <= delay + 1;
               end
               2'b11: begin
                 if (!max_comp4) begin
                   max_idx <= 4*(b_addr[1:0]-1)+4;
                   max_value <= tdata[31:24];
                 end
+                delay <= 2'b00;
               end
               default: ;
             endcase
