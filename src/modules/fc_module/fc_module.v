@@ -933,6 +933,7 @@ module fc_module
             end
             else begin
               state <= STATE_COMPUTE;
+              delay <= 2'b00;
               f_bram_en <= 1'b0;
               w1_bram_en <= 1'b0;
               w2_bram_en <= 1'b0;
@@ -960,6 +961,7 @@ module fc_module
                 m_axis_tlast <= 1'b1;
                 fc_done <= 1'b1;            
                 state <= STATE_IDLE;
+                delay <= 2'b00;
               end
             end
             else if (delay == 2'b11) begin
@@ -989,13 +991,16 @@ module fc_module
                 m_axis_tlast <= 1'b1;
                 fc_done <= 1'b1;            
                 state <= STATE_IDLE;
+                delay <= 2'b00;
               end
               else if (w4_addr[10]) begin
                 state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
                 s_axis_tready <= 1'b1;
+                delay <= 2'b00;
               end
             end
             else if (delay[1]) begin
+              delay <= 2'b00;
               state <= STATE_PSUM;  
               m_axis_tvalid <= 1'b0;
               pe_1_en <= 1'b0;
@@ -1123,6 +1128,7 @@ module fc_module
         end
 
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
+          m_axis_tvalid <= 1'b0;
           if (S_AXIS_TVALID) begin
             if (next_cnt[10:0] == feat_size>>2) begin
               receive_cnt <= 10'h000;
@@ -1280,12 +1286,14 @@ module fc_module
               pe_delay <= pe_delay + 1;              
             end
             else if (pe_delay[0] && !pe_delay[1]) begin
+              pe_delay <= pe_delay + 1;
               pe_result <= pe_result2_temp;
               bias_temp <= {{15{bias[15]}},bias[14:8], {6{1'b0}}};
               bias_add_result1 <= bias_add_result;
               pe_delay <= pe_delay + 1;
             end
             else if (!pe_delay[0] && pe_delay[1]) begin
+              pe_delay <= pe_delay + 1;
               pe_result <= pe_result3_temp;
               bias_temp <= {{15{bias[23]}},bias[22:16], {6{1'b0}}};
               bias_add_result2 <= bias_add_result;
@@ -1330,7 +1338,9 @@ module fc_module
         end
         STATE_SEND_RESULT: begin
           //max_index 가 0~9가 아닌 1~10을 출력해야함
-          m_axis_tdata <= tdata;
+          delay <= delay + 1;
+          m_axis_tdata <= tdata; // tb test 용.
+
           if (|bias_size[1:0]) begin
             case (delay)
               2'b00: begin
@@ -1364,11 +1374,6 @@ module fc_module
               end
               default: ;
             endcase
-          end
-          else begin
-            if (delay[0] && b_addr[8:0]==bias_size>>2) delay <= 2'b00;
-            else if (delay[1]) delay <= 2'b00;
-            else delay <= delay + 1;
           end
           // else m_axis_tdata <= tdata;
         end

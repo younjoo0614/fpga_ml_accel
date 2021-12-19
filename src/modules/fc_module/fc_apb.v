@@ -14,12 +14,16 @@ module fc_apb
     output wire [31:0] PRDATA,  // CPU interface out
 
     input wire [31:0] clk_counter,
-    input wire [31:0] max_index
+    input wire [31:0] max_index,
 
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports as you need
     //////////////////////////////////////////////////////////////////////////
-    
+    output reg [2:0] COMMAND,
+    output reg fc_start,
+    output reg [20:0] SIZE,
+
+    input wire F_writedone, B_writedone, FC_DONE, W_writedone
   );
 
   wire state_enable;
@@ -66,10 +70,10 @@ module fc_apb
         case ({PADDR[31:2], 2'h0})
           /*WRITEIN*/
           32'h00000000 : begin
-
+            COMMAND <= PWDATA[2:0];
           end
           32'h00000004 : begin
-
+            SIZE <= PWDATA[20:0];
           end
           default: ;
         endcase
