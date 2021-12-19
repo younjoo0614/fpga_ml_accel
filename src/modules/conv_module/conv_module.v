@@ -639,18 +639,18 @@ module conv_module
           end
           else begin
             if (S_AXIS_TVALID) begin
-              if (next_faddr[11:0] == flen*flen*num_inch>>2) begin
+              // if (next_faddr[11:0] == flen*flen*num_inch>>2) begin
+              //   s_axis_tready <= 1'b0;
+              //   f_bram_en <= 1'b0;
+              //   f_we <= 1'b0;
+              //   f_receive_done <= 1'b1;
+              // end
+              if ((cnt_col == (flen>>2)-1) && (cnt_row == flen-1) && (cnt_ch == num_inch-1)) begin
                 s_axis_tready <= 1'b0;
                 f_bram_en <= 1'b0;
                 f_we <= 1'b0;
                 f_receive_done <= 1'b1;
               end
-              // if ((cnt_col == (flen>>2)-1) && (cnt_row == flen-1) && (cnt_ch == num_inch-1)) begin
-                // s_axis_tready <= 1'b0;
-                // f_bram_en <= 1'b0;
-                // f_we <= 1'b0;
-                // f_receive_done <= 1'b1;
-              // end
             end
           end
         end
@@ -898,6 +898,10 @@ module conv_module
               f_addr <= next_faddr[11:0];
               cnt_col <= cnt_col + 1;
             end
+            // if (next_faddr[11:0] == flen*flen*num_inch>>2) begin
+            //   f_addr <= 12'h0;
+            // end
+            // else f_addr <= next_faddr[11:0];
           end
         end
         STATE_RECEIVE_BIAS: begin
@@ -961,7 +965,7 @@ module conv_module
                   feat_temp[31:0] <= {f_dout[7:0], f_dout[15:8], f_dout[23:16], f_dout[31:24]};
                   cnt_9 <= cnt_9 + 1;
                   read_delay <= 2'b00;
-                  f_addr <= next_faddr[10:0];
+                  f_addr <= next_faddr[11:0];
                 end
                 else begin 
                   read_delay <= read_delay +1;
@@ -992,7 +996,7 @@ module conv_module
                   feat_temp[31:0] <= {f_dout[7:0], f_dout[15:8], f_dout[23:16], f_dout[31:24]};
                   cnt_9 <= cnt_9 + 1;
                   read_delay <= 2'b00;
-                  f_addr <= next_faddr[10:0];
+                  f_addr <= next_faddr[11:0];
                 end
                 else begin
                   read_delay <= read_delay +1;
