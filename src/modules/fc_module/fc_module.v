@@ -55,45 +55,45 @@ module CLA_16Bit (
   CLA4 cla4_3(.a(A_1[15:12]), .b(B[15:12]), .C_in(C_out_LCU[2]), .s(S[15:12]), .C_out(), .p_g(P[3]), .g_g(G[3]), .of());
 endmodule
 
-module COMP_8Bit(
-  input [7:0] A,
-  input [7:0] B,
+// module COMP_8Bit(
+//   input [7:0] A,
+//   input [7:0] B,
 
-  output comp
- );
-  wire [1:0] C_out_LCU;
-  wire [1:0] P;
-  wire [1:0] G;
+//   output comp
+//  );
+//   wire [1:0] C_out_LCU;
+//   wire [1:0] P;
+//   wire [1:0] G;
 
-  wire [7:0] A_1;
+//   wire [7:0] A_1;
 
-  wire [7:0] S;
-  assign comp = S[7];
+//   wire [7:0] S;
+//   assign comp = S[7];
 
-  assign A_1 = ~A;
+//   assign A_1 = ~A;
 
-  CLG2 clg2(.C_in(1'b1), .p(P), .g(G), .C_out(C_out_LCU));
-  CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(1'b1), .s(S[3:0]), .C_out(), .p_g(P[0]), .g_g(G[0]), .of());
-  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(), .p_g(P[1]), .g_g(G[1]), .of());
-endmodule
+//   CLG2 clg2(.C_in(1'b1), .p(P), .g(G), .C_out(C_out_LCU));
+//   CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(1'b1), .s(S[3:0]), .C_out(), .p_g(P[0]), .g_g(G[0]), .of());
+//   CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(), .p_g(P[1]), .g_g(G[1]), .of());
+// endmodule
 
-module CLG4
-(
-  input C_in,
-  input [3:0] p, 
-  input [3:0] g,
+// module CLG4
+// (
+//   input C_in,
+//   input [3:0] p, 
+//   input [3:0] g,
 
-  output [3:0] C_out
-);
+//   output [3:0] C_out
+// );
 
-//-------- assign carry out ------------------------------------
-assign C_out[0] = g[0] | (p[0] & C_in);
-assign C_out[1] = g[1] | (p[1] & C_out[0]);
-assign C_out[2] = g[2] | (p[2] & C_out[1]);
-assign C_out[3] = g[3] | (p[3] & C_out[2]);
-//--------------------------------------------------------------
+// //-------- assign carry out ------------------------------------
+// assign C_out[0] = g[0] | (p[0] & C_in);
+// assign C_out[1] = g[1] | (p[1] & C_out[0]);
+// assign C_out[2] = g[2] | (p[2] & C_out[1]);
+// assign C_out[3] = g[3] | (p[3] & C_out[2]);
+// //--------------------------------------------------------------
 
-endmodule
+// endmodule
 
 module CLG3
 (
@@ -112,64 +112,64 @@ assign C_out[2] = g[2] | (p[2] & C_out[1]);
 
 endmodule
 
-module CLG2
-(
-  input C_in,
-  input [1:0] p,
-  input [1:0] g,
+// module CLG2
+// (
+//   input C_in,
+//   input [1:0] p,
+//   input [1:0] g,
 
-  output [1:0] C_out
-);
-  assign C_out[0] = g[0] | (p[0] & C_in);
-  assign C_out[1] = g[1] | (p[1] & C_out[0]);
-endmodule
-
-
-module CLA4
-(
-  input [3:0] a,
-  input [3:0] b,
-  input C_in,
-
-  output [3:0] s,
-  output C_out,
-  output p_g,
-  output g_g,
-  output of
-);
-
-wire [3:0] p;
-wire [3:0] g;
-wire [3:0] c;
-
-//-------- assign each bits of g, p, s -------------------------
-assign p[0]=a[0]^b[0];
-assign p[1]=a[1]^b[1];
-assign p[2]=a[2]^b[2];
-assign p[3]=a[3]^b[3];
-assign g[0]=a[0]&b[0];
-assign g[1]=a[1]&b[1];
-assign g[2]=a[2]&b[2];
-assign g[3]=a[3]&b[3];
-assign s[0]=p[0]^C_in;
-assign s[1]=p[1]^c[0];
-assign s[2]=p[2]^c[1];
-assign s[3]=p[3]^c[2];
-//--------------------------------------------------------------
+//   output [1:0] C_out
+// );
+//   assign C_out[0] = g[0] | (p[0] & C_in);
+//   assign C_out[1] = g[1] | (p[1] & C_out[0]);
+// endmodule
 
 
-//-------- assign group p, group g, Carry_out, overflow --------
-assign p_g = p[0]&p[1]&p[2]&p[3];
-assign g_g = g[3]|(g[2]&p[3])|(g[1]&p[2]&p[3])|(g[0]&p[1]&p[2]&p[3]); 
-assign C_out = g_g|(p_g&C_in);
-assign of = c[3] ^ c[2];
-//--------------------------------------------------------------
+// module CLA4
+// (
+//   input [3:0] a,
+//   input [3:0] b,
+//   input C_in,
+
+//   output [3:0] s,
+//   output C_out,
+//   output p_g,
+//   output g_g,
+//   output of
+// );
+
+// wire [3:0] p;
+// wire [3:0] g;
+// wire [3:0] c;
+
+// //-------- assign each bits of g, p, s -------------------------
+// assign p[0]=a[0]^b[0];
+// assign p[1]=a[1]^b[1];
+// assign p[2]=a[2]^b[2];
+// assign p[3]=a[3]^b[3];
+// assign g[0]=a[0]&b[0];
+// assign g[1]=a[1]&b[1];
+// assign g[2]=a[2]&b[2];
+// assign g[3]=a[3]&b[3];
+// assign s[0]=p[0]^C_in;
+// assign s[1]=p[1]^c[0];
+// assign s[2]=p[2]^c[1];
+// assign s[3]=p[3]^c[2];
+// //--------------------------------------------------------------
 
 
-//-------- CLG_4bit --------------------------------------------
-CLG4 clg4(.C_in(C_in), .p(p), .g(g), .C_out(c));
+// //-------- assign group p, group g, Carry_out, overflow --------
+// assign p_g = p[0]&p[1]&p[2]&p[3];
+// assign g_g = g[3]|(g[2]&p[3])|(g[1]&p[2]&p[3])|(g[0]&p[1]&p[2]&p[3]); 
+// assign C_out = g_g|(p_g&C_in);
+// assign of = c[3] ^ c[2];
+// //--------------------------------------------------------------
 
-endmodule
+
+// //-------- CLG_4bit --------------------------------------------
+// CLG4 clg4(.C_in(C_in), .p(p), .g(g), .C_out(c));
+
+// endmodule
 
 module pe (                    
   input [7:0]      A,
@@ -860,8 +860,7 @@ module fc_module
           if (cnt_4[1] && cnt_4[0]) begin // cnt_4 = 3
             if (feat_size[10] && f_addr[8]) begin
               if (delay[1] && delay[0]) begin // delay = 3
-                state <= STATE_PSUM;  
-                delay <= 2'b00;
+                state <= STATE_PSUM; 
                 pe_1_en <= 1'b0;
                 pe_2_en <= 1'b0;
                 pe_3_en <= 1'b0;
@@ -872,12 +871,10 @@ module fc_module
                 w3_bram_en <= 1'b1;
                 w4_bram_en <= 1'b1;   
               end
-              else delay <= delay + 1;
             end
             else if (feat_size[8] && f_addr[6]) begin
               if (delay[1] && delay[0]) begin
                 state <= STATE_PSUM;  
-                delay <= 2'b00;
                 pe_1_en <= 1'b0;
                 pe_2_en <= 1'b0;
                 pe_3_en <= 1'b0;
@@ -888,12 +885,10 @@ module fc_module
                 w3_bram_en <= 1'b1;
                 w4_bram_en <= 1'b1;   
               end
-              else delay <= delay + 1;
             end
             else if (feat_size[6] && f_addr[4]) begin
               if (delay[1] && delay[0]) begin
                 state <= STATE_PSUM;  
-                delay <= 2'b00;
                 pe_1_en <= 1'b0;
                 pe_2_en <= 1'b0;
                 pe_3_en <= 1'b0;
@@ -904,7 +899,6 @@ module fc_module
                 w3_bram_en <= 1'b1;
                 w4_bram_en <= 1'b1;   
               end
-              else delay <= delay + 1;
             end
             else begin
               state <= STATE_PSUM;  
@@ -933,7 +927,6 @@ module fc_module
             end
             else begin
               state <= STATE_COMPUTE;
-              delay <= 2'b00;
               f_bram_en <= 1'b0;
               w1_bram_en <= 1'b0;
               w2_bram_en <= 1'b0;
@@ -961,11 +954,9 @@ module fc_module
                 m_axis_tlast <= 1'b1;
                 fc_done <= 1'b1;            
                 state <= STATE_IDLE;
-                delay <= 2'b00;
               end
             end
             else if (delay == 2'b11) begin
-              delay <= 2'b00;
               state <= STATE_PSUM;  
               m_axis_tvalid <= 1'b0;
               pe_1_en <= 1'b0;
@@ -991,16 +982,13 @@ module fc_module
                 m_axis_tlast <= 1'b1;
                 fc_done <= 1'b1;            
                 state <= STATE_IDLE;
-                delay <= 2'b00;
               end
               else if (w4_addr[10]) begin
                 state <= STATE_RECEIVE_WEIGHT_AND_READ_FEATURE;
                 s_axis_tready <= 1'b1;
-                delay <= 2'b00;
               end
             end
             else if (delay[1]) begin
-              delay <= 2'b00;
               state <= STATE_PSUM;  
               m_axis_tvalid <= 1'b0;
               pe_1_en <= 1'b0;
@@ -1128,7 +1116,7 @@ module fc_module
         end
 
         STATE_RECEIVE_WEIGHT_AND_READ_FEATURE: begin
-          m_axis_tvalid <= 1'b0;
+          //m_axis_tvalid <= 1'b0;
           if (S_AXIS_TVALID) begin
             if (next_cnt[10:0] == feat_size>>2) begin
               receive_cnt <= 10'h000;
@@ -1215,6 +1203,8 @@ module fc_module
             if(!(feat_size[10] && f_addr[8]) && !(feat_size[8] && f_addr[6]) && !(feat_size[6] && f_addr[4])) begin
               cnt_4 <= 3'b000;
             end
+            else if (delay[1] && delay[0]) delay <= 2'b0;
+            else delay <= delay + 1;
             weight1 <= weight1 << 8;
             weight2 <= weight2 << 8;
             weight3 <= weight3 << 8;
@@ -1374,6 +1364,13 @@ module fc_module
               end
               default: ;
             endcase
+          end
+          else begin
+            if (delay[0]) begin
+              if (b_addr[8:0]==bias_size>>2) delay <= 2'b0;
+              else if (w4_addr[10]) delay <= 2'b0;
+            end
+            else if (delay[1]) delay <= 2'b0;
           end
           // else m_axis_tdata <= tdata;
         end
