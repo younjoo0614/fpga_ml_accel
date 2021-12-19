@@ -102,11 +102,15 @@ module conv_top
 
     .clk_counter (clk_counter),
     .conv_done   (conv_done),
-    .conv_start  (conv_start)
+    .conv_start  (conv_start),
 
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
+    .Flen(),
+    .num_INCH(),
+    .num_OUTCH(),
+    .COMMAND()
   );
   
 endmodule

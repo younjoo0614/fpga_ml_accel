@@ -15,12 +15,15 @@ module conv_apb
 
     input wire [31:0] clk_counter,
     input wire [0:0] conv_done,
-    output reg [0:0] conv_start
+    output reg [0:0] conv_start,
 
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
-    
+    output reg COMMAND,
+    output reg Flen,
+    output reg num_INCH,
+    output reg num_OUTCH
   );
   
   wire state_enable;
@@ -68,7 +71,17 @@ module conv_apb
         case ({PADDR[31:2], 2'h0})
           /*WRITEIN*/
           32'h00000000 : begin
+            COMMAND <= PWDATA[2:0];
             conv_start <= PWDATA[0];
+          end
+          32'h00000004 : begin
+            Flen <= PWDATA[5:0];
+          end
+          32'h00000008 : begin
+            num_INCH <= PWDATA[8:0];
+          end
+          32'h0000000c : begin
+            num_OUTCH <= PWDATA[8:0];
           end
           default: ;
         endcase
