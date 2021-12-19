@@ -619,6 +619,7 @@ module conv_module
       tdata <= 32'h0;
       go_read_weight <= 1'b0;
       read_feat_done <= 1'b0;
+      s_axis_tready <= 1'b0;
     end
     else begin
       case (state)
