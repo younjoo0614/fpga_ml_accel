@@ -80,7 +80,14 @@ module conv_top
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
-
+    .command(),
+    .num_INCH(),
+    .num_OUTCH(),
+    .Flen(),
+    .F_writedone(),
+    .B_writedone(),
+    .RDY_TO_SEND(),
+    .SEND_DONE()
   );
   
   conv_apb u_conv_apb(
@@ -95,7 +102,7 @@ module conv_top
 
     .clk_counter (clk_counter),
     .conv_done   (conv_done),
-    .conv_start  (conv_start),
+    .conv_start  (conv_start)
 
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
