@@ -21,9 +21,9 @@ module conv_apb
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
     output reg COMMAND,
-    output reg Flen,
-    output reg num_INCH,
-    output reg num_OUTCH
+    output reg [5:0] Flen,
+    output reg [8:0] num_INCH,
+    output reg [8:0] num_OUTCH
   );
   
   wire state_enable;
