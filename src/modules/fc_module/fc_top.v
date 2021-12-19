@@ -45,6 +45,10 @@ module fc_top
   wire [31:0] max_index;
   assign PREADY = 1'b1;
   assign PSLVERR = 1'b0;
+
+  wire [2:0] command;
+  wire [20:0] size;
+  wire F_writedone, W_writedone, B_writedone;
   
   clk_counter_fc u_clk_counter(
     .clk   (CLK),
@@ -71,7 +75,12 @@ module fc_top
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports as you need
     //////////////////////////////////////////////////////////////////////////
-
+    .COMMAND(command),
+    .SIZE(size),
+    .F_writedone(F_writedone),
+    .B_writedone(B_writedone),
+    .W_writedone(W_writedone),
+    .FC_DONE(fc_done)
   );
   
   fc_module u_fc_module(
@@ -95,6 +104,14 @@ module fc_top
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports as you need
     //////////////////////////////////////////////////////////////////////////
+    .command(command),
+    .fc_start(command[0]),
+    .size(size),
+    .F_writedone(F_writedone),
+    .W_writedone(W_writedone),
+    .B_writedone(B_writedone),
+    .FC_DONE(fc_done),
+    .MAX_idx(max_index)
   );
   
 endmodule
