@@ -965,7 +965,7 @@ module conv_module
                   f_addr <= next_faddr[11:0];
                 end
                 else begin 
-                  read_delay <= read_delay +1;
+                  read_delay <= read_delay + 1;
                   if (read_delay[0])begin
                     feat_temp <= feat_temp << 32;
                   end
@@ -978,7 +978,7 @@ module conv_module
               feat_3[2] <= 272'h0; 
             end
             else begin  //마지막도 아니고 첫 번째도 아닌 줄
-              if (cnt_9 == (flen>>2) ) begin 
+              if (cnt_9 == (flen>>2)) begin 
                 cnt_9 <= 4'h0;
                 feat_3[0] <= feat_3[1];
                 feat_3[1] <= feat_3[2];
@@ -996,7 +996,7 @@ module conv_module
                   f_addr <= next_faddr[11:0];
                 end
                 else begin
-                  read_delay <= read_delay +1;
+                  read_delay <= read_delay + 1;
                   if (read_delay[0])begin
                     feat_temp <= feat_temp << 32;
                   end
@@ -1021,8 +1021,8 @@ module conv_module
               cnt_9 <= cnt_9 + 1;
             end
             else if (read_delay[0]) begin
-              read_delay <= read_delay +1;
-              weight_36 <= weight_36 <<32;
+              read_delay <= read_delay + 1;
+              weight_36 <= weight_36 << 32;
             end
             else begin
               read_delay <= read_delay + 1;
@@ -1098,32 +1098,32 @@ module conv_module
           else read_delay <= read_delay + 1;
         end
         STATE_PREPARE_RESULT: begin
-          if (read_delay[1] && !read_delay[0]) begin
-            read_delay <= 2'b11;            
-          end
-          else if (read_delay[1] && read_delay[0]) begin
-            cnt_tdata <= cnt_tdata +1;
+          if (read_delay[1] && read_delay[0]) begin
             read_delay <= 2'b00;
             case (cnt_tdata)
               3'b000: begin
                 tdata[7:0] <=partial_data[27] ? (8'b0000_0000) : 
                           ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);               
                 r_addr <= next_raddr;
+                cnt_tdata <= cnt_tdata + 1;
               end
               3'b001: begin
                 tdata[15:8] <= partial_data[27] ? (8'b0000_0000) : 
                           ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);                 
                 r_addr <= next_raddr;
+                cnt_tdata <= cnt_tdata + 1;
               end
               3'b010: begin
                 tdata[23:16] <=partial_data[27] ? (8'b0000_0000) : 
                           ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);                 
                 r_addr <= next_raddr;
+                cnt_tdata <= cnt_tdata + 1;
               end
               3'b011: begin
                 tdata[31:24] <= partial_data[27] ? (8'b0000_0000) : 
                           ((partial_data[26:13] == 14'b00_0000_0000_0000) ? {1'b0, partial_data[12:6]} : 8'b0111_1111);                 
                 r_addr <= next_raddr;
+                cnt_tdata <= cnt_tdata + 1;
                 //r_bram_en <= 1'b0;
               end
               3'b100: begin
