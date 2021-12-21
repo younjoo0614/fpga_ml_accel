@@ -45,8 +45,8 @@ module pool_top
   assign PREADY = 1'b1;
   assign PSLVERR = 1'b0;
 
-  wire [5:0] flen;
-  wire [8:0] inch;
+  wire [5:0] Flen;
+  wire [8:0] num_INCH;
   
   clk_counter_pool u_clk_counter(
     .clk(CLK),

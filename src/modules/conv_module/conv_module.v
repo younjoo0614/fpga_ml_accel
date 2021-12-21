@@ -426,8 +426,7 @@ module conv_module
     input [5:0] Flen,
     output wire F_writedone,
     output wire B_writedone,
-    output wire RDY_TO_SEND,
-    output wire SEND_DONE
+    output wire RDY_TO_SEND
   );
   localparam STATE_IDLE = 4'd0,
   STATE_RECEIVE_FEATURE = 4'd1,  //BRAM 으로 receive
@@ -462,7 +461,7 @@ module conv_module
   // TODO : Write your code here
   ////////////////////////////////////////////////////////////////////////////
   reg [3:0] state;
-  reg f_receive_done, b_receive_done, w_receive_done, send_done, calc_all_done;
+  reg f_receive_done, b_receive_done, w_receive_done, calc_all_done;
   reg pe_en, first;
   reg [11:0] f_addr;
   reg [6:0] b_addr;
@@ -505,7 +504,6 @@ module conv_module
   assign B_writedone = b_receive_done;
   assign W_writedone = w_receive_done;
   assign RDY_TO_SEND = calc_all_done;
-  assign SEND_DONE = send_done;
   assign din = S_AXIS_TDATA;
   assign r_din = partial_result;
   assign p1_a = feat[71:64];
@@ -606,7 +604,7 @@ module conv_module
       f_receive_done <= 1'b0;
       b_receive_done <= 1'b0;
       w_receive_done <= 1'b0;
-      send_done <= 1'b0;
+      conv_done <= 1'b0;
       calc_all_done <= 1'b0;
       pe_en <= 1'b0;
       first <= 1'b0;
@@ -629,7 +627,7 @@ module conv_module
     else begin
       case (state)
         STATE_IDLE: begin
-          if (command == 3'b001) begin
+          if (conv_start) begin
             state <= STATE_RECEIVE_FEATURE;
             s_axis_tready <= 1'b1;
             f_bram_en <= 1'b1;
@@ -789,13 +787,13 @@ module conv_module
           end
         end
         STATE_SEND_RESULT: begin
-          if (send_done) begin
+          if (conv_done) begin
             state <= STATE_IDLE;
           end
           else if (cnt_output == (flen * flen >> 2) - 1) begin //weight 직육면체 하나에 대해서 계산 끝났을 때           
             if (outch_cnt == num_OUTCH) begin
               outch_cnt <= 9'd0;    
-              send_done <= 1'b1;     
+              conv_done <= 1'b1;     
               m_axis_tvalid <= 1'b0;     
               m_axis_tlast <= 1'b1; 
             end
@@ -866,7 +864,7 @@ module conv_module
     else begin
       case (state)
         STATE_IDLE: begin
-          if (command==3'b001) begin
+          if (conv_start) begin
             flen <= Flen;
             num_inch <= num_INCH;
             num_outch <= num_OUTCH;

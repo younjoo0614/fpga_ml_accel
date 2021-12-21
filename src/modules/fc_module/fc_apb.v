@@ -46,6 +46,10 @@ module fc_apb
       if (~PWRITE & state_enable_pre) begin
         case ({PADDR[31:2], 2'h0})
           /*READOUT*/
+          32'h0000000c : prdata_reg <= {31'h0, FC_DONE};
+          32'h00000010 : prdata_reg <= {31'h0, F_writedone};
+          32'h00000014 : prdata_reg <= {31'h0, B_writedone};
+          32'h00000008 : prdata_reg <= {31'h0, W_writedone};
           32'h00000018 : prdata_reg <= clk_counter;
           32'h00000020 : prdata_reg <= max_index;
           default: prdata_reg <= 32'h0;
@@ -63,7 +67,9 @@ module fc_apb
   always @(posedge PCLK, negedge PRESETB) begin
     if (PRESETB == 1'b0) begin
       /*WRITERES*/
-
+      SIZE <= 21'h0;
+      fc_start <= 1'b0;
+      COMMAND <= 3'b0;
     end
     else begin
       if (PWRITE & state_enable) begin
@@ -71,6 +77,7 @@ module fc_apb
           /*WRITEIN*/
           32'h00000000 : begin
             COMMAND <= PWDATA[2:0];
+            fc_start <= |PWDATA;
           end
           32'h00000004 : begin
             SIZE <= PWDATA[20:0];

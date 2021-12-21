@@ -49,7 +49,7 @@ module conv_top
   wire [8:0] num_INCH, num_OUTCH;
   wire [2:0] command;
 
-  wire F_writedone, B_writedone, send_done, rdy_to_send;
+  wire F_writedone, B_writedone, rdy_to_send;
   
   clk_counter_conv u_clk_counter(
     .clk   (CLK),
@@ -86,14 +86,13 @@ module conv_top
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
-    .COMMAND(command),
+    .command(command),
     .num_INCH(num_INCH),
     .num_OUTCH(num_OUTCH),
     .Flen(Flen),
-    .F_writedone(F_write_done),
-    .B_writedone(B_write_done),
-    .RDY_TO_SEND(rdy_to_send),
-    .SEND_DONE(send_done)
+    .F_writedone(F_writedone),
+    .B_writedone(B_writedone),
+    .RDY_TO_SEND(rdy_to_send)
   );
   
   conv_apb u_conv_apb(
@@ -116,7 +115,10 @@ module conv_top
     .Flen(Flen),
     .num_INCH(num_INCH),
     .num_OUTCH(num_OUTCH),
-    .COMMAND(command)
+    .COMMAND(command),
+    .F_writedone(F_writedone),
+    .B_writedone(B_writedone),
+    .rdy_to_send(rdy_to_send)
   );
   
 endmodule
