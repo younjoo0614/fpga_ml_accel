@@ -737,6 +737,7 @@ module fc_module
       case (state)
         STATE_IDLE: begin
           m_axis_tvalid <= 1'b0;
+          m_axis_tlast <= 1'b0;
           if (fc_start) begin
             if (command[0] && !f_receive_done) begin
               state <= STATE_RECEIVE_FEATURE;
@@ -952,7 +953,7 @@ module fc_module
             if (delay == 2'b10) begin
               m_axis_tvalid <= 1'b1;         
               if (b_addr[8:0]==(bias_size>>2) + 1) begin
-                m_axis_tlast <= 1'b1;
+                m_axis_tlast <= 1'b1; 
                 fc_done <= 1'b1;            
                 state <= STATE_IDLE;
               end
