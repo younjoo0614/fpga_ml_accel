@@ -210,12 +210,13 @@ class Scale_UART:
         ## feature receive
         done = 0
         self.su_write_data(faddr + 0x04, F['HSIZE']*F['VSIZE'])
+        print("feature receive start")
         self.su_write_data(faddr + 0x00, 0x1)
         while (True):
             done = self.su_read_data(faddr + 0x10)
             if (int.from_bytes(done, 'big', signed=True) == 1):
                 break
-
+        print("feature receive done")
         # Set bias param to vdma0
         self.su_write_data(vaddr + 0x00, 0x00010091)
         self.su_write_data(vaddr + 0x5c, B['BASE_ADDR'])
@@ -225,12 +226,13 @@ class Scale_UART:
         ## bias receive
         done = 0
         self.su_write_data(faddr + 0x04, B['HSIZE']*B['VSIZE'])
+        print("bias receive start")
         self.su_write_data(faddr + 0x00, 0x2)
         while (True):
             done = self.su_read_data(faddr + 0x14)
             if (int.from_bytes(done, 'big', signed=True) == 1):
                 break
-
+        print("bias receive done")
         # Set weight param to vdma0
         self.su_write_data(vaddr + 0x00, 0x00010091)
         self.su_write_data(vaddr + 0x5c, W['BASE_ADDR'])
@@ -242,21 +244,23 @@ class Scale_UART:
         # Fix size for each weight receive
         self.su_write_data(faddr + 0x04, 0x20)
         self.su_write_data(faddr + 0x00, 0x4)
+        print("weight receive start")
         while (True):
             done = self.su_read_data(faddr + 0x08)
             if (int.from_bytes(done, 'big', signed=True) == 1):
                 break
-
+        print("weight receive done")
         # Start FC proc.
         done = 0
         self.su_write_data(faddr + 0x00, 0x5)
+        print("fc start")
         while (True):
             done = self.su_read_data(faddr + 0x0c)
             if (int.from_bytes(done, 'big', signed=True) == 1):
                 break
         self.su_write_data(faddr + 0x00, 0x0) # Reset module
         self.su_write_data(vaddr + 0x00, 0x00010094)
-        # print("FC done.")
+        print("FC done.")
         return 1
 
     # Set the VDMA
@@ -313,10 +317,12 @@ class Scale_UART:
         ## feature receive
         done = 0
         self.su_write_data(caddr + 0x00, 0x1) #command
+        print("feature receive start")
         while (True):
             done = self.su_read_data(caddr + 0x20)
             if (int.from_bytes(done, 'big', signed=True) == 1):
                 break
+        print("feature receive done")
         self.su_write_data(caddr + 0x10, 0x1) #respond
         # Set bias param to vdma2
         self.su_write_data(vaddr + 0x00, 0x00010091)
@@ -324,13 +330,15 @@ class Scale_UART:
         self.su_write_data(vaddr + 0x58, B['STRIDE_SIZE'])
         self.su_write_data(vaddr + 0x54, B['HSIZE'])
         self.su_write_data(vaddr + 0x50, B['VSIZE'])
-        ## feature receive
+        ## bias receive
         done = 0
         self.su_write_data(caddr + 0x00, 0x2) #command
+        print("bias receive start")
         while (True):
             done = self.su_read_data(caddr + 0x24)
             if (int.from_bytes(done, 'big', signed=True) == 1):
                 break
+        print("weight receive done")
         self.su_write_data(caddr + 0x14, 0x1) #respond
         # Set weight param to vdma2
         self.su_write_data(vaddr + 0x00, 0x00010091)
@@ -341,12 +349,15 @@ class Scale_UART:
         ## weight receive
         done = 0
         self.su_write_data(caddr + 0x00, 0x3) #command
+        print("weight receive start")
         while (True):
             done = self.su_read_data(caddr + 0x28)
             if (int.from_bytes(done, 'big', signed=True) == 1):
                 break
+        print("weight receive done")
         self.su_write_data(caddr + 0x18, 0x1) #respond
         # Start Conv proc.
+        print("conv start")
         done = 0
         self.su_write_data(caddr + 0x00, 0x4); #command
         while (True):
@@ -356,7 +367,7 @@ class Scale_UART:
         self.su_write_data(caddr + 0x1c, 0x1) #respond
         self.su_write_data(caddr + 0x00, 0x0) # Reset module
         self.su_write_data(vaddr + 0x00, 0x00010094)
-        # print("Conv done.")
+        print("Conv done.")
         return 1
 
         # Set the VDMA2
@@ -392,7 +403,7 @@ class Scale_UART:
         self.su_write_data(paddr + 0x04, I['FLEN'])
         self.su_write_data(paddr + 0x0C, I['IN_CH'])
         self.su_write_data(paddr + 0x00, 0x1) #start
-
+        print("pool start")
         done = 0
         # Spinlock for pool_done
         while (True):
@@ -401,7 +412,7 @@ class Scale_UART:
                 break
         self.su_write_data(paddr + 0x00, 0x0) # Reset module
         self.su_write_data(vaddr + 0x00, 0x00010094)
-        # print("Pool done.")
+        print("Pool done.")
         return 1
 
 

@@ -15,12 +15,14 @@ module pool_apb
 
     input wire [31:0] clk_counter,
     input wire [0:0] pool_done,
-    output reg [0:0] pool_start
+    output reg [0:0] pool_start,
 
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
-    
+
+    output reg [5:0] Flen,
+    output reg [8:0] num_INCH
   );
   
   wire state_enable;
@@ -33,7 +35,6 @@ module pool_apb
   //////////////////////////////////////////////////////////////////////////
   // TODO : Write your code here
   //////////////////////////////////////////////////////////////////////////
-  
   // READ OUTPUT
   always @(posedge PCLK, negedge PRESETB) begin
     if (PRESETB == 1'b0) begin
@@ -44,8 +45,7 @@ module pool_apb
         case ({PADDR[31:2], 2'h0})
           /*READOUT*/
           32'h00000000 : prdata_reg <= {31'h0,pool_start};
-          32'h00000004 : prdata_reg <= {31'd0,pool_done};
-          32'h00000008 : prdata_reg <= clk_counter;
+          32'h00000008 : prdata_reg <= {31'd0,pool_done};
           default: prdata_reg <= 32'h0;
         endcase
       end
@@ -69,6 +69,12 @@ module pool_apb
           /*WRITEIN*/
           32'h00000000 : begin
             pool_start <= PWDATA[0];
+          end
+          32'h00000004: begin
+            Flen <= PWDATA[5:0];
+          end
+          32'h0000000c: begin
+            num_INCH <= PWDATA[8:0];
           end
           default: ;
         endcase

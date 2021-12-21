@@ -44,6 +44,12 @@ module conv_top
   wire [31:0]   clk_counter;
   assign PREADY = 1'b1;
   assign PSLVERR = 1'b0;
+
+  wire [5:0] Flen;
+  wire [8:0] num_INCH, num_OUTCH;
+  wire [2:0] command;
+
+  wire F_writedone, B_writedone, rdy_to_send;
   
   clk_counter_conv u_clk_counter(
     .clk   (CLK),
@@ -80,7 +86,13 @@ module conv_top
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
-
+    .command(command),
+    .num_INCH(num_INCH),
+    .num_OUTCH(num_OUTCH),
+    .Flen(Flen),
+    .F_writedone(F_writedone),
+    .B_writedone(B_writedone),
+    .RDY_TO_SEND(rdy_to_send)
   );
   
   conv_apb u_conv_apb(
@@ -100,6 +112,13 @@ module conv_top
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
+    .Flen(Flen),
+    .num_INCH(num_INCH),
+    .num_OUTCH(num_OUTCH),
+    .COMMAND(command),
+    .F_writedone(F_writedone),
+    .B_writedone(B_writedone),
+    .rdy_to_send(rdy_to_send)
   );
   
 endmodule
