@@ -5,21 +5,23 @@ module COMP_8Bit(
   input [7:0] A,
   input [7:0] B,
 
-  output comp // comp == 1 -> A > B
+  output comp
  );
   wire [1:0] C_out_LCU;
   wire [1:0] P;
   wire [1:0] G;
 
-  wire [7:0] A_1;    // if C_in = 1, inverse of A
+  wire [7:0] A_1;
   wire [7:0] S;
-  assign comp = S[7];
-  assign A_1 = ~A;
+  wire of;
 
+  assign comp = S[7] ^ of;
+
+  assign A_1 = ~A;
 
   CLG2 clg2(.C_in(1'b1), .p(P), .g(G), .C_out(C_out_LCU));
   CLA4 cla4_0(.a(A_1[3:0]), .b(B[3:0]), .C_in(1'b1), .s(S[3:0]), .C_out(), .p_g(P[0]), .g_g(G[0]), .of());
-  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(), .p_g(P[1]), .g_g(G[1]), .of());
+  CLA4 cla4_1(.a(A_1[7:4]), .b(B[7:4]), .C_in(C_out_LCU[0]), .s(S[7:4]), .C_out(), .p_g(P[1]), .g_g(G[1]), .of(of));
 endmodule
 
 module CLG2
