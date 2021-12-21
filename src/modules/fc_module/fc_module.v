@@ -1305,13 +1305,13 @@ module fc_module
 
         STATE_WRITE_RESULT: begin
           if (|bias_size[1:0]) begin
-            tdata[7:0] <= bias_add_result1[27] ? (8'b0000_0000) : 
+            tdata[7:0] <= bias_add_result1[27] ? ((bias_add_result1[26:13] == 14'b11_1111_1111_1111) ? {1'b1, bias_add_result1[12:6]} + 1 : 8'b1000_0000): 
                           ((bias_add_result1[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result1[12:6]} : 8'b0111_1111); 
-            tdata[15:8] <= bias_add_result2[27] ? (8'b0000_0000) : 
+            tdata[15:8] <= bias_add_result2[27] ? ((bias_add_result2[26:13] == 14'b11_1111_1111_1111) ? {1'b1, bias_add_result2[12:6]} + 1 : 8'b1000_0000):
                             ((bias_add_result2[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result2[12:6]} : 8'b0111_1111);
-            tdata[23:16] <= bias_add_result3[27] ? (8'b0000_0000) : 
+            tdata[23:16] <= bias_add_result3[27] ? ((bias_add_result3[26:13] == 14'b11_1111_1111_1111) ? {1'b1, bias_add_result3[12:6]} + 1 : 8'b1000_0000):
                             ((bias_add_result3[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result3[12:6]} : 8'b0111_1111);
-            tdata[31:24] <= bias_add_result4[27] ? (8'b0000_0000) : 
+            tdata[31:24] <= bias_add_result4[27] ? ((bias_add_result4[26:13] == 14'b11_1111_1111_1111) ? {1'b1, bias_add_result4[12:6]} + 1 : 8'b1000_0000):
                             ((bias_add_result4[26:13] == 14'b00_0000_0000_0000) ? {1'b0, bias_add_result4[12:6]} : 8'b0111_1111);
           end
           else begin
