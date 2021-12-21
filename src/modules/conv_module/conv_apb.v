@@ -89,6 +89,15 @@ module conv_apb
           32'h00000008 : begin
             num_OUTCH <= PWDATA[8:0];
           end
+          32'h0000000c : begin
+            Flen <= PWDATA[5:0];
+          end
+          32'h00000004 : begin
+            num_INCH <= PWDATA[8:0];
+          end
+          32'h00000008 : begin
+            num_OUTCH <= PWDATA[8:0];
+          end
           default: ;
         endcase
       end

@@ -517,14 +517,20 @@ module top_simulation
       .M_AXIS_TDATA(M_AXIS_TDATA),
       .M_AXIS_TKEEP(M_AXIS_TKEEP),
       .M_AXIS_TLAST(M_AXIS_TLAST),
-      .M_AXIS_TVALID(M_AXIS_TVALID)
+      .M_AXIS_TVALID(M_AXIS_TVALID),
       
       
       /////////////////////////////////////////////////////////
       // TODO: Add ports
       /////////////////////////////////////////////////////////
-
-      
+      .command(COMMAND),
+      .num_INCH(InCh),
+      .num_OUTCH(OutCh),
+      .F_writedone(F_writedone),
+      .B_writedone(B_writedone),
+      .RDY_TO_SEND(rdy_to_transmit),
+      .Flen(FLength),
+      .SEND_DONE(transmit_done)
     );
         
 endmodule

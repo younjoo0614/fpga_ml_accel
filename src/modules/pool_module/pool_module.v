@@ -201,9 +201,7 @@ module pool_module
             state <= STATE_RECEIVE_DATA;
             s_axis_tready <= 1'b1;
           end
-          else begin
-            s_axis_tready <= 1'b0;            
-          end 
+          else s_axis_tready <= 1'b0;
         end
 
         STATE_RECEIVE_DATA: begin     

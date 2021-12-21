@@ -213,6 +213,7 @@ class Scale_UART:
         self.su_write_data(faddr + 0x04, F['HSIZE']*F['VSIZE'])
         print("feature receive start")
         self.su_write_data(faddr + 0x00, 0x1)
+        print("feature receive start")
         while (True):
             done = self.su_read_data(faddr + 0x10)
             if (int.from_bytes(done, 'big', signed=True) == 1):
@@ -229,6 +230,7 @@ class Scale_UART:
         self.su_write_data(faddr + 0x04, B['HSIZE']*B['VSIZE'])
         print("bias receive start")
         self.su_write_data(faddr + 0x00, 0x2)
+        print("bias receive start")
         while (True):
             done = self.su_read_data(faddr + 0x14)
             if (int.from_bytes(done, 'big', signed=True) == 1):
@@ -340,7 +342,7 @@ class Scale_UART:
             done = self.su_read_data(caddr + 0x24)
             if (int.from_bytes(done, 'big', signed=True) == 1):
                 break
-        print("weight receive done")
+        print("bias receive done")
         self.su_write_data(caddr + 0x14, 0x1) #respond
         # Set weight param to vdma2
         self.su_write_data(vaddr + 0x00, 0x00010091)
@@ -362,6 +364,7 @@ class Scale_UART:
         print("conv start")
         done = 0
         self.su_write_data(caddr + 0x00, 0x4); #command
+        print("conv start")
         while (True):
             done = self.su_read_data(caddr + 0x2c)
             if (int.from_bytes(done, 'big', signed=True) == 1):

@@ -85,8 +85,8 @@ module pool_top
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
 
-    .Flen(flen),
-    .num_INCH(inch)
+    .Flen(Flen),
+    .num_INCH(num_INCH)
   );
 
   pool_apb u_pool_apb(
@@ -107,8 +107,8 @@ module pool_top
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
 
-    .Flen(flen),
-    .num_INCH(inch),
+    .Flen(Flen),
+    .num_INCH(num_INCH),
     .RSTN(rstn)
   );
   

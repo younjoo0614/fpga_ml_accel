@@ -505,11 +505,17 @@ module top_simulation
         .M_AXIS_TDATA(M_AXIS_TDATA),
         .M_AXIS_TKEEP(M_AXIS_TKEEP),
         .M_AXIS_TLAST(M_AXIS_TLAST),
-        .M_AXIS_TVALID(M_AXIS_TVALID)
+        .M_AXIS_TVALID(M_AXIS_TVALID),
         
         
         /////////////////////// ?????? ???? begin ////////////////////////////
-  
+        .size(receive_size),
+        .command(COMMAND),
+        .fc_start(fc_start),
+        .F_writedone(F_writedone),
+        .B_writedone(B_writedone),
+        .W_writedone(W_writedone),
+        .FC_DONE(fc_done)
         /////////////////////// ?????? ???? end //////////////////////////////////////
         );
         

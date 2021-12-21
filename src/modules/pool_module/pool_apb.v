@@ -78,6 +78,12 @@ module pool_apb
           32'h0000000c: begin
             num_INCH <= PWDATA[8:0];
           end
+          32'h00000004: begin
+            Flen <= PWDATA[5:0];
+          end
+          32'h0000000c: begin
+            num_INCH <= PWDATA[8:0];
+          end
           default: ;
         endcase
       end
