@@ -948,7 +948,7 @@ module fc_module
           if (pe_delay[3]) state <= STATE_WRITE_RESULT;
         end
         STATE_SEND_RESULT: begin        
-          if (|bias_size[1:0]) begin // tb test 용. 내용 수정 필요
+          if (|bias_size[1:0]) begin
             if (delay == 2'b10) begin
               m_axis_tvalid <= 1'b1;         
               if (b_addr[8:0]==(bias_size>>2) + 1) begin
@@ -1330,9 +1330,7 @@ module fc_module
         end
         STATE_SEND_RESULT: begin
           //max_index 가 0~9가 아닌 1~10을 출력해야함
-          delay <= delay + 1;
-          m_axis_tdata <= tdata; // tb test 용.
-
+          m_axis_tdata <= tdata;
           if (|bias_size[1:0]) begin
             case (delay)
               2'b00: begin
@@ -1371,8 +1369,10 @@ module fc_module
             if (delay[0]) begin
               if (b_addr[8:0]==bias_size>>2) delay <= 2'b0;
               else if (w4_addr[10]) delay <= 2'b0;
+              else delay <= delay + 1;
             end
             else if (delay[1]) delay <= 2'b0;
+            else delay <= delay + 1;
           end
           // else m_axis_tdata <= tdata;
         end
