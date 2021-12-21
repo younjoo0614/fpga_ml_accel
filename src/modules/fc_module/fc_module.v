@@ -1045,7 +1045,7 @@ module fc_module
       f_receive_done <= 1'b0;
       b_receive_done <= 1'b0;
       w_receive_done <= 1'b0;
-      max_idx <= 4'd0;
+      //max_idx <= 4'd0;
       max_value <= 8'h80;
       pe_delay <= 4'h0;
       feat <= 32'h00000000;
@@ -1053,7 +1053,7 @@ module fc_module
       weight2 <= 64'h0000_0000_0000_0000;
       weight3 <= 64'h0000_0000_0000_0000;
       weight4 <= 64'h0000_0000_0000_0000;
-      weight_n <= 1'b0;
+      weight_n <= 2'b0;
     end
     else begin
       case (state)
@@ -1199,53 +1199,51 @@ module fc_module
         end
         STATE_COMPUTE: begin          
           cnt_4 <= cnt_4 + 1;
-          if (cnt_4[1] && cnt_4[0]) begin // cnt_4 = 3
-            if(!(feat_size[10] && f_addr[8]) && !(feat_size[8] && f_addr[6]) && !(feat_size[6] && f_addr[4])) begin
-              cnt_4 <= 3'b000;
-            end
-            else if (delay[1] && delay[0]) delay <= 2'b0;
-            else delay <= delay + 1;
+          if (cnt_4[1] && cnt_4[0]) begin
             weight1 <= weight1 << 8;
             weight2 <= weight2 << 8;
             weight3 <= weight3 << 8;
             weight4 <= weight4 << 8;
             feat <= feat << 8;
+            if ((feat_size[10] && f_addr[8]) ||(feat_size[8] && f_addr[6]) ||(feat_size[6] && f_addr[4])) delay <= delay + 1;
+            else cnt_4 <= 3'b000;
           end
-          else if (cnt_4[1] || cnt_4[0]) begin //cnt_4 = 2 or 1
+          else if (cnt_4[1] || cnt_4[0]) begin //cnt_4 =3 or 2 or 1
+            weight1 <= weight1 << 8;
+            weight2 <= weight2 << 8;
+            weight3 <= weight3 << 8;
+            weight4 <= weight4 << 8;
+            feat <= feat << 8;
             first1 <= 1'b0;
             first2 <= 1'b0;
             first3 <= 1'b0;
             first4 <= 1'b0;
-            weight1 <= weight1 << 8;
-            weight2 <= weight2 << 8;
-            weight3 <= weight3 << 8;
-            weight4 <= weight4 << 8;
-            feat <= feat << 8;
           end          
           else begin //cnt_4 =0
             cnt_4 <= cnt_4 + 1;
-            if (~|f_addr) begin // first
+            if (~|f_addr) begin
               f_addr <= next_faddr[10:0];
               w1_addr <= next_w1addr[10:0];
               w2_addr <= next_w2addr[10:0];
               w3_addr <= next_w3addr[10:0];
               w4_addr <= next_w4addr[10:0];
-              first1 <= 1'b1;
-              first2 <= 1'b1;
-              first3 <= 1'b1;
-              first4 <= 1'b1;
+              first1 <= 1'b0;
+              first2 <= 1'b0;
+              first3 <= 1'b0;
+              first4 <= 1'b0;
             end
-            else begin
-              weight1 <= weight1 << 8;
-              weight2 <= weight2 << 8;
-              weight3 <= weight3 << 8;
-              weight4 <= weight4 << 8;
-              feat <= feat << 8;
-            end             
+            feat <= feat << 8;
+            weight1 <= weight1 << 8;
+            weight2 <= weight2 << 8;
+            weight3 <= weight3 << 8;
+            weight4 <= weight4 << 8;              
           end
         end
-        STATE_PSUM: begin       
-          if (delay[1]) begin // delay = 2
+ STATE_PSUM: begin          
+          if (!delay[1]) begin
+            delay <= delay +1;            
+          end
+          else begin
             delay <= 2'b00;                   
             weight1[63:32] <= {w1_dout[7:0],w1_dout[15:8], w1_dout[23:16], w1_dout[31:24]};
             weight2[55:24] <= {w2_dout[7:0],w2_dout[15:8], w2_dout[23:16], w2_dout[31:24]};
@@ -1262,9 +1260,12 @@ module fc_module
               w3_addr <= next_w3addr[10:0];
               w4_addr <= next_w4addr[10:0];
             end       
-          end
-          else begin //delay = 0 or 1
-            delay <= delay +1;            
+            else begin
+                first1 <= 1'b1;
+                first2 <= 1'b1;
+                first3 <= 1'b1;
+                first4 <= 1'b1;
+             end 
           end
         end
 

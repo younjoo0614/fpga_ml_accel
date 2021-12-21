@@ -73,21 +73,12 @@ module conv_apb
     end
     else begin
       if (PWRITE & state_enable) begin
-        case ({PADDR[31:2], 2'h0})
+        case ({PADDR[31:2], 2'b0})
           /*WRITEIN*/
           32'h00000000 : begin
             COMMAND <= PWDATA[2:0];
             conv_start <= PWDATA[0];
             RSTN <= |PWDATA;
-          end
-          32'h0000000c : begin
-            Flen <= PWDATA[5:0];
-          end
-          32'h00000004 : begin
-            num_INCH <= PWDATA[8:0];
-          end
-          32'h00000008 : begin
-            num_OUTCH <= PWDATA[8:0];
           end
           32'h0000000c : begin
             Flen <= PWDATA[5:0];

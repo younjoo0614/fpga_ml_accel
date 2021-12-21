@@ -66,17 +66,11 @@ module pool_apb
     end
     else begin
       if (PWRITE & state_enable) begin
-        case ({PADDR[31:2], 2'h0})
+        case ({PADDR[31:2], 2'b0})
           /*WRITEIN*/
           32'h00000000 : begin
             pool_start <= PWDATA[0];
             RSTN <= |PWDATA;
-          end
-          32'h00000004: begin
-            Flen <= PWDATA[5:0];
-          end
-          32'h0000000c: begin
-            num_INCH <= PWDATA[8:0];
           end
           32'h00000004: begin
             Flen <= PWDATA[5:0];
