@@ -21,6 +21,7 @@ module pool_apb
     // TODO : Add ports if you need them
     //////////////////////////////////////////////////////////////////////////
 
+    output reg RSTN,
     output reg [5:0] Flen,
     output reg [8:0] num_INCH
   );
@@ -69,6 +70,7 @@ module pool_apb
           /*WRITEIN*/
           32'h00000000 : begin
             pool_start <= PWDATA[0];
+            RSTN <= |PWDATA;
           end
           32'h00000004: begin
             Flen <= PWDATA[5:0];

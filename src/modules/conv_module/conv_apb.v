@@ -24,6 +24,7 @@ module conv_apb
     output reg [5:0] Flen,
     output reg [8:0] num_INCH,
     output reg [8:0] num_OUTCH,
+    output reg RSTN,
     input wire F_writedone, rdy_to_send, B_writedone
   );
   
@@ -77,6 +78,7 @@ module conv_apb
           32'h00000000 : begin
             COMMAND <= PWDATA[2:0];
             conv_start <= PWDATA[0];
+            RSTN <= |PWDATA;
           end
           32'h0000000c : begin
             Flen <= PWDATA[5:0];

@@ -48,7 +48,7 @@ module fc_top
 
   wire [2:0] command;
   wire [20:0] size;
-  wire F_writedone, W_writedone, B_writedone;
+  wire F_writedone, W_writedone, B_writedone, rstn;
   
   clk_counter_fc u_clk_counter(
     .clk   (CLK),
@@ -81,12 +81,13 @@ module fc_top
     .B_writedone(B_writedone),
     .W_writedone(W_writedone),
     .FC_DONE(fc_done),
-    .fc_start(fc_start)
+    .fc_start(fc_start),
+    .RSTN(rstn)
   );
   
   fc_module u_fc_module(
     .clk  (CLK),
-    .rstn (RESETN),
+    .rstn (rstn),
 
     .S_AXIS_TREADY (S_AXIS_TREADY),
     .S_AXIS_TDATA  (S_AXIS_TDATA),

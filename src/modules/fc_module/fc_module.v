@@ -729,13 +729,13 @@ module fc_module
       pe_2_en <= 1'b0;
       pe_3_en <= 1'b0;
       pe_4_en <= 1'b0;
-      s_axis_tready <= 1'b0;
+      s_axis_tready <= 1'b0;    
+      fc_done <= 1'b0;  
     end
     else begin
       case (state)
         STATE_IDLE: begin
           m_axis_tvalid <= 1'b0;
-          fc_done <= 1'b0;
           if (fc_start) begin
             if (command[0] && !f_receive_done) begin
               state <= STATE_RECEIVE_FEATURE;

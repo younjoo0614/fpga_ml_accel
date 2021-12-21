@@ -48,6 +48,7 @@ module conv_top
   wire [5:0] Flen;
   wire [8:0] num_INCH, num_OUTCH;
   wire [2:0] command;
+  wire rstn;
 
   wire F_writedone, B_writedone, rdy_to_send;
   
@@ -64,7 +65,7 @@ module conv_top
   u_conv_module
   (
     .clk  (CLK),
-    .rstn (RESETN),
+    .rstn (rstn),
 
     .S_AXIS_TREADY (S_AXIS_TREADY),
     .S_AXIS_TDATA  (S_AXIS_TDATA),
@@ -118,7 +119,8 @@ module conv_top
     .COMMAND(command),
     .F_writedone(F_writedone),
     .B_writedone(B_writedone),
-    .rdy_to_send(rdy_to_send)
+    .rdy_to_send(rdy_to_send),
+    .RSTN(rstn)
   );
   
 endmodule

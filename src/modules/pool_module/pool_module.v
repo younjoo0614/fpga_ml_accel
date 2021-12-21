@@ -186,21 +186,24 @@ module pool_module
       idx_16 <= 6'b000000;
       cnt_4 <= 3'b000;
       cnt_receive <= 12'b0;
+      pool_done <= 1'b0;
     end
     else begin
       case (state)
         STATE_IDLE: begin
           receive_done <= 1'b0;
-          pool_done <= 1'b0;
           m_axis_tvalid <= 1'b0;
           m_axis_tlast <= 1'b0;
           if (pool_start) begin
+            //pool_done <= 1'b0;
             flen <= Flen;
             num_inch <= num_INCH;
             state <= STATE_RECEIVE_DATA;
             s_axis_tready <= 1'b1;
           end
-          else s_axis_tready <= 1'b0;
+          else begin
+            s_axis_tready <= 1'b0;            
+          end 
         end
 
         STATE_RECEIVE_DATA: begin     

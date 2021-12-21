@@ -47,6 +47,7 @@ module pool_top
 
   wire [5:0] Flen;
   wire [8:0] num_INCH;
+  wire rstn;
   
   clk_counter_pool u_clk_counter(
     .clk(CLK),
@@ -61,7 +62,7 @@ module pool_top
   u_pool_module
   (
     .clk  (CLK),
-    .rstn (RESETN),
+    .rstn (rstn),
 
     .S_AXIS_TREADY (S_AXIS_TREADY),
     .S_AXIS_TDATA  (S_AXIS_TDATA),
@@ -107,7 +108,8 @@ module pool_top
     //////////////////////////////////////////////////////////////////////////
 
     .Flen(flen),
-    .num_INCH(inch)
+    .num_INCH(inch),
+    .RSTN(rstn)
   );
   
 endmodule
