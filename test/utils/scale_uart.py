@@ -208,6 +208,7 @@ class Scale_UART:
         self.su_write_data(vaddr + 0x54, F['HSIZE'])
         self.su_write_data(vaddr + 0x50, F['VSIZE'])
         ## feature receive
+        self.su_write_data(faddr + 0x00, 0x0) # Reset module
         done = 0
         self.su_write_data(faddr + 0x04, F['HSIZE']*F['VSIZE'])
         print("feature receive start")
@@ -315,6 +316,7 @@ class Scale_UART:
         self.su_write_data(vaddr + 0x54, F['HSIZE'])
         self.su_write_data(vaddr + 0x50, F['VSIZE'])
         ## feature receive
+        self.su_write_data(caddr + 0x00, 0x0) # Reset module
         done = 0
         self.su_write_data(caddr + 0x00, 0x1) #command
         print("feature receive start")
@@ -402,6 +404,7 @@ class Scale_UART:
         # Set input param, then start the max-pool proc
         self.su_write_data(paddr + 0x04, I['FLEN'])
         self.su_write_data(paddr + 0x0C, I['IN_CH'])
+        self.su_write_data(paddr + 0x00, 0x0) # Reset module
         self.su_write_data(paddr + 0x00, 0x1) #start
         print("pool start")
         done = 0
@@ -437,7 +440,7 @@ class Scale_UART:
             while hex_32:
                 i +=1
                 hex_32 = file_feature.read(32)
-                if(count%1000 == 0):
+                if(count%100 == 0):
                     print("Count is", count)
                 if(hex_32 != ''):
                     data_test = self.su_read_data((addr_test+count*4))
@@ -449,6 +452,8 @@ class Scale_UART:
                         print("!! ERROR !! , Count is ", count)
                         print("Want : ", hex(int(hex_32,2)))
                         print("Result : ", [hex(c) for c in data_test])
+                    else:
+                        print("checking")
                     base_addr = base_addr + 4
                     count = count + 1
                     temp = data_test;     
