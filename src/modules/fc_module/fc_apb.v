@@ -22,10 +22,7 @@ module fc_apb
     output reg [2:0] COMMAND,
     output reg fc_start,
     output reg [20:0] SIZE,
-<<<<<<< HEAD
     output reg RSTN,
-=======
->>>>>>> 41d80aa713f52a7ee2e42009be140b3579f79551
 
     input wire F_writedone, B_writedone, FC_DONE, W_writedone
   );
@@ -82,10 +79,7 @@ module fc_apb
           32'h00000000 : begin
             COMMAND <= PWDATA[2:0];
             fc_start <= |PWDATA;
-<<<<<<< HEAD
             RSTN <= |PWDATA;
-=======
->>>>>>> 41d80aa713f52a7ee2e42009be140b3579f79551
           end
           32'h00000004 : begin
             SIZE <= PWDATA[20:0];
