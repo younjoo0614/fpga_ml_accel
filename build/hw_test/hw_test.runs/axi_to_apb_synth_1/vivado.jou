@@ -1,0 +1,12 @@
+#-----------------------------------------------------------
+# Vivado v2021.1 (64-bit)
+# SW Build 3247384 on Thu Jun 10 19:36:33 MDT 2021
+# IP Build 3246043 on Fri Jun 11 00:30:35 MDT 2021
+# Start of session at: Wed Dec 22 12:55:04 2021
+# Process ID: 29700
+# Current directory: C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.runs/axi_to_apb_synth_1
+# Command line: vivado.exe -log axi_to_apb.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source axi_to_apb.tcl
+# Log file: C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.runs/axi_to_apb_synth_1/axi_to_apb.vds
+# Journal file: C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.runs/axi_to_apb_synth_1\vivado.jou
+#-----------------------------------------------------------
+source axi_to_apb.tcl -notrace

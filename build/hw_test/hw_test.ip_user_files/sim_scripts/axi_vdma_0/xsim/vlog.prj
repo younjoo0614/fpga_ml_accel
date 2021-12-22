@@ -1,5 +1,3 @@
-verilog xil_defaultlib --include "../../../../../../src/common_ip/axi_vdma_0/hdl" \
-"../../../../../../src/common_ip/axi_vdma_0/axi_vdma_0_sim_netlist.v" \
 
 verilog xil_defaultlib "glbl.v"
 

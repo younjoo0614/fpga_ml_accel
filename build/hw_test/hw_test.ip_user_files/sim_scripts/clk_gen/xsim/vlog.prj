@@ -1,5 +1,6 @@
-verilog xil_defaultlib --include "../../../../../../src/common_ip/clk_gen" \
-"../../../../../../src/common_ip/clk_gen/clk_gen_sim_netlist.v" \
+verilog xil_defaultlib --include "../../../ipstatic" \
+"../../../../../../src/common_ip/clk_gen/clk_gen_clk_wiz.v" \
+"../../../../../../src/common_ip/clk_gen/clk_gen.v" \
 
 verilog xil_defaultlib "glbl.v"
 

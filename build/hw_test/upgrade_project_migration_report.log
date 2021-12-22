@@ -1,0 +1,39 @@
+Copyright 1986-2021 Xilinx, Inc. All Rights Reserved.
+-----------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2021.1 (win64) Build 3247384 Thu Jun 10 19:36:33 MDT 2021
+| Date         : Wed Dec 22 06:05:29 2021
+| Host         : DESKTOP-L4F61F4 running 64-bit major release  (build 9200)
+| Command      : upgrade_project -migrate_output_products
+| Project_Path : C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.xpr
+-----------------------------------------------------------------------------------------
+
+Project Status Summary
+
+1. Project IP Status
+--------------------
+This project contains 8 IP and 0 Block Designs.
+
+
+1.1 Project IP Instances
++--------------------+-------------------------+-------------------------------------+-------------------------------------+
+| Instance Name      | Status                  | Reason                              | Recommendation                      |
++--------------------+-------------------------+-------------------------------------+-------------------------------------+
+| clk_gen            | Remote Source.          | IP is remote.                       | Migration not required.             |
++--------------------+-------------------------+-------------------------------------+-------------------------------------+
+| axi_vdma_0         | Remote Source.          | IP is remote.                       | Migration not required.             |
++--------------------+-------------------------+-------------------------------------+-------------------------------------+
+| mig_dram           | Remote Source.          | IP is remote.                       | Migration not required.             |
++--------------------+-------------------------+-------------------------------------+-------------------------------------+
+| axi_crossbar_0     | Remote Source.          | IP is remote.                       | Migration not required.             |
++--------------------+-------------------------+-------------------------------------+-------------------------------------+
+| axi4_32_to_axilite | Remote Source.          | IP is remote.                       | Migration not required.             |
++--------------------+-------------------------+-------------------------------------+-------------------------------------+
+| axi_interconnect_1 | Remote Source.          | IP is remote.                       | Migration not required.             |
++--------------------+-------------------------+-------------------------------------+-------------------------------------+
+| axi_crossbar_1     | Remote Source.          | IP is remote.                       | Migration not required.             |
++--------------------+-------------------------+-------------------------------------+-------------------------------------+
+| axi_to_apb         | Remote Source.          | IP is remote.                       | Migration not required.             |
++--------------------+-------------------------+-------------------------------------+-------------------------------------+
+
+
+

@@ -1,2 +1,2 @@
-axi_vdma_0_sim_netlist.v,verilog,xil_defaultlib,../../../../../../src/common_ip/axi_vdma_0/axi_vdma_0_sim_netlist.v,incdir="../../../../../../src/common_ip/axi_vdma_0/hdl"
+axi_vdma_0.vhd,vhdl,xil_defaultlib,../../../../../../src/common_ip/axi_vdma_0/sim/axi_vdma_0.vhd,incdir="$ref_dir/../../../ipstatic/hdl"incdir="../../../ipstatic/hdl"
 glbl.v,Verilog,xil_defaultlib,glbl.v

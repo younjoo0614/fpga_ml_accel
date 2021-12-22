@@ -1,0 +1,12 @@
+#-----------------------------------------------------------
+# Vivado v2021.1 (64-bit)
+# SW Build 3247384 on Thu Jun 10 19:36:33 MDT 2021
+# IP Build 3246043 on Fri Jun 11 00:30:35 MDT 2021
+# Start of session at: Wed Dec 22 12:51:02 2021
+# Process ID: 22664
+# Current directory: C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.runs/mig_dram_synth_1
+# Command line: vivado.exe -log mig_dram.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source mig_dram.tcl
+# Log file: C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.runs/mig_dram_synth_1/mig_dram.vds
+# Journal file: C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.runs/mig_dram_synth_1\vivado.jou
+#-----------------------------------------------------------
+source mig_dram.tcl -notrace

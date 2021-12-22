@@ -1,0 +1,23 @@
+#-----------------------------------------------------------
+# Vivado v2021.1 (64-bit)
+# SW Build 3247384 on Thu Jun 10 19:36:33 MDT 2021
+# IP Build 3246043 on Fri Jun 11 00:30:35 MDT 2021
+# Start of session at: Wed Dec 22 12:31:26 2021
+# Process ID: 29508
+# Current directory: C:/Users/younj/Desktop/dsd_final/build/hw_test
+# Command line: vivado.exe -gui_launcher_event rodinguilauncherevent16088 C:\Users\younj\Desktop\dsd_final\build\hw_test\hw_test.xpr
+# Log file: C:/Users/younj/Desktop/dsd_final/build/hw_test/vivado.log
+# Journal file: C:/Users/younj/Desktop/dsd_final/build/hw_test\vivado.jou
+#-----------------------------------------------------------
+start_gui
+open_project C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.xpr
+update_compile_order -fileset sources_1
+launch_runs synth_1 -jobs 8
+wait_on_run synth_1
+upgrade_ip -srcset clk_gen -vlnv xilinx.com:ip:clk_wiz:6.0 [get_ips  clk_gen] -log ip_upgrade.log
+export_ip_user_files -of_objects [get_ips clk_gen] -no_script -sync -force -quiet
+update_compile_order -fileset sources_1
+upgrade_ip -srcset mig_dram -vlnv xilinx.com:ip:mig_7series:4.2 [get_ips  mig_dram] -log ip_upgrade.log
+export_ip_user_files -of_objects [get_ips mig_dram] -no_script -sync -force -quiet
+update_compile_order -fileset sources_1
+set_param board.repoPaths {C:/Xilinx/Vivado/2021.1/data/board_files}

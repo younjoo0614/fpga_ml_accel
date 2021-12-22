@@ -1,0 +1,39 @@
+#-----------------------------------------------------------
+# Vivado v2021.1 (64-bit)
+# SW Build 3247384 on Thu Jun 10 19:36:33 MDT 2021
+# IP Build 3246043 on Fri Jun 11 00:30:35 MDT 2021
+# Start of session at: Wed Dec 22 09:00:39 2021
+# Process ID: 28128
+# Current directory: C:/Users/younj/Desktop/dsd_final/build/hw_test
+# Command line: vivado.exe -gui_launcher_event rodinguilauncherevent2644 C:\Users\younj\Desktop\dsd_final\build\hw_test\hw_test.xpr
+# Log file: C:/Users/younj/Desktop/dsd_final/build/hw_test/vivado.log
+# Journal file: C:/Users/younj/Desktop/dsd_final/build/hw_test\vivado.jou
+#-----------------------------------------------------------
+start_gui
+open_project C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.xpr
+Scanning sources...
+Finished scanning sources
+WARNING: [Project 1-509] GeneratedRun file for 'clk_gen_synth_1' not found
+WARNING: [Project 1-509] GeneratedRun file for 'axi_vdma_0_synth_1' not found
+WARNING: [Project 1-509] GeneratedRun file for 'mig_dram_synth_1' not found
+WARNING: [Project 1-509] GeneratedRun file for 'axi4_32_to_axilite_synth_1' not found
+WARNING: [Project 1-509] GeneratedRun file for 'axi_to_apb_synth_1' not found
+WARNING: [Project 1-509] GeneratedRun file for 'axi_crossbar_0_synth_1' not found
+WARNING: [Project 1-509] GeneratedRun file for 'sram_32x1024_synth_1' not found
+WARNING: [Project 1-509] GeneratedRun file for 'sram_32x2112_synth_1' not found
+WARNING: [Project 1-509] GeneratedRun file for 'sram_32x2560_synth_1' not found
+WARNING: [Project 1-509] GeneratedRun file for 'axi_crossbar_1_synth_1' not found
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository 'C:/Xilinx/Vivado/2021.1/data/ip'.
+open_project: Time (s): cpu = 00:00:33 ; elapsed = 00:00:19 . Memory (MB): peak = 1138.383 ; gain = 0.000
+update_compile_order -fileset sources_1
+launch_simulation
+Command: launch_simulation 
+INFO: [Vivado 12-12493] Simulation top is 'main'
+INFO: [Vivado 12-5698] Checking validity of IPs in the design for the 'XSim' simulator...
+INFO: [Runs 36-567] Checking/generating simulation output products for IPs/BDs (if any)...
+INFO: [IP_Flow 19-1686] Generating 'Simulation' target for IP 'axi_interconnect_1'...
+INFO: [Vivado 12-5682] Launching behavioral simulation in 'C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.sim/sim_1/behav/xsim'
+INFO: [Vivado 12-4795] Using compiled simulation libraries for IPs
+INFO: [Common 17-41] Interrupt caught. Command should exit soon.

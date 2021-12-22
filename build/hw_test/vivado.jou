@@ -1,0 +1,22 @@
+#-----------------------------------------------------------
+# Vivado v2021.1 (64-bit)
+# SW Build 3247384 on Thu Jun 10 19:36:33 MDT 2021
+# IP Build 3246043 on Fri Jun 11 00:30:35 MDT 2021
+# Start of session at: Wed Dec 22 12:46:05 2021
+# Process ID: 17572
+# Current directory: C:/Users/younj/Desktop/dsd_final/build/hw_test
+# Command line: vivado.exe -gui_launcher_event rodinguilauncherevent20248 C:\Users\younj\Desktop\dsd_final\build\hw_test\hw_test.xpr
+# Log file: C:/Users/younj/Desktop/dsd_final/build/hw_test/vivado.log
+# Journal file: C:/Users/younj/Desktop/dsd_final/build/hw_test\vivado.jou
+#-----------------------------------------------------------
+start_gui
+open_project C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.xpr
+update_compile_order -fileset sources_1
+set_property board_part digilentinc.com:arty-a7-100:part0:1.0 [current_project]
+upgrade_ip -vlnv xilinx.com:ip:clk_wiz:6.0 [get_ips  clk_gen] -log ip_upgrade.log
+export_ip_user_files -of_objects [get_ips clk_gen] -no_script -sync -force -quiet
+generate_target all [get_files  C:/Users/younj/Desktop/dsd_final/src/common_ip/clk_gen/clk_gen.xci]
+catch { config_ip_cache -export [get_ips -all clk_gen] }
+export_ip_user_files -of_objects [get_files C:/Users/younj/Desktop/dsd_final/src/common_ip/clk_gen/clk_gen.xci] -no_script -sync -force -quiet
+create_ip_run [get_files -of_objects [get_fileset sources_1] C:/Users/younj/Desktop/dsd_final/src/common_ip/clk_gen/clk_gen.xci]
+export_simulation -of_objects [get_files C:/Users/younj/Desktop/dsd_final/src/common_ip/clk_gen/clk_gen.xci] -directory C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.ip_user_files/sim_scripts -ip_user_files_dir C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.ip_user_files -ipstatic_source_dir C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.ip_user_files/ipstatic -lib_map_path [list {modelsim=C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.cache/compile_simlib/modelsim} {questa=C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.cache/compile_simlib/questa} {riviera=C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.cache/compile_simlib/riviera} {activehdl=C:/Users/younj/Desktop/dsd_final/build/hw_test/hw_test.cache/compile_simlib/activehdl}] -use_ip_compiled_libs -force -quiet

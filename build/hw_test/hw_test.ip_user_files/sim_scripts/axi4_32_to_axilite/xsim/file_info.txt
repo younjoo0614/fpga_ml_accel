@@ -1,2 +1,2 @@
-axi4_32_to_axilite_sim_netlist.v,verilog,xil_defaultlib,../../../../../../src/common_ip/axi4_32_to_axilite/axi4_32_to_axilite_sim_netlist.v,incdir="../../../../../../src/common_ip/axi4_32_to_axilite/hdl"
+axi4_32_to_axilite.v,verilog,xil_defaultlib,../../../../../../src/common_ip/axi4_32_to_axilite/sim/axi4_32_to_axilite.v,incdir="$ref_dir/../../../ipstatic/hdl"incdir="../../../ipstatic/hdl"
 glbl.v,Verilog,xil_defaultlib,glbl.v
