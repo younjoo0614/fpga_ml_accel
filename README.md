@@ -26,3 +26,7 @@
   - ```cifar10_network_quan_param```: quantized network parameter
   - ```new_cifar10_random_data```: additional quantized network parameters
   - If any errors appear while running these codes, check if all the package dependencies are installed
+# ECE-315.A_2021_Fall_Final_Project
+
+### Project announcements and documentation repo
+[Announcements_and_Documentations](https://github.com/SNU-Comparch-Classes/ECE-315.A_2021_Fall_Final_Project.git)
