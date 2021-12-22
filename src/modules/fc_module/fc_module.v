@@ -95,22 +95,22 @@ endmodule
 
 // endmodule
 
-// module CLG3
-// (
-//   input C_in,
-//   input [2:0] p, 
-//   input [2:0] g,
+module CLG3
+(
+  input C_in,
+  input [2:0] p, 
+  input [2:0] g,
 
-//   output [2:0] C_out
-// );
+  output [2:0] C_out
+);
 
-// //-------- assign carry out ------------------------------------
-// assign C_out[0] = g[0] | (p[0] & C_in);
-// assign C_out[1] = g[1] | (p[1] & C_out[0]);
-// assign C_out[2] = g[2] | (p[2] & C_out[1]);
-// //--------------------------------------------------------------
+//-------- assign carry out ------------------------------------
+assign C_out[0] = g[0] | (p[0] & C_in);
+assign C_out[1] = g[1] | (p[1] & C_out[0]);
+assign C_out[2] = g[2] | (p[2] & C_out[1]);
+//--------------------------------------------------------------
 
-// endmodule
+endmodule
 
 // module CLG2
 // (
@@ -731,13 +731,12 @@ module fc_module
       pe_4_en <= 1'b0;
       s_axis_tready <= 1'b0;    
       fc_done <= 1'b0;  
-      m_axis_tvalid <= 1'b0;
     end
     else begin
       case (state)
         STATE_IDLE: begin
           m_axis_tvalid <= 1'b0;
-          m_axis_tlast <= 1'b0;
+          //m_axis_tlast <= 1'b0;
           if (fc_start) begin
             if (command[0] && !f_receive_done) begin
               state <= STATE_RECEIVE_FEATURE;
@@ -949,11 +948,11 @@ module fc_module
           if (pe_delay[3]) state <= STATE_WRITE_RESULT;
         end
         STATE_SEND_RESULT: begin        
-          if (|bias_size[1:0]) begin
+          if (|bias_size[1:0]) begin // tb test 용. 내용 수정 필요
             if (delay == 2'b10) begin
               m_axis_tvalid <= 1'b1;         
               if (b_addr[8:0]==(bias_size>>2) + 1) begin
-                m_axis_tlast <= 1'b1; 
+                m_axis_tlast <= 1'b1;
                 fc_done <= 1'b1;            
                 state <= STATE_IDLE;
               end
@@ -1133,7 +1132,7 @@ module fc_module
               end
               else begin
                 column_cnt <= column_cnt + 1;
-                if (!S_AXIS_TLAST) begin
+                //if (!S_AXIS_TLAST) begin
                   case (weight_n)
                     2'b00: begin
                       w1_addr <= next_w1addr[10:0]; 
@@ -1159,24 +1158,24 @@ module fc_module
                     end
                     default: ;
                   endcase
-                end
-                else begin
-                  case (weight_n)
-                    2'b00: weight_n <= 2'b01;
-                    2'b01: weight_n <= 2'b10;
-                    2'b10: weight_n <= 2'b11;
-                    2'b11: begin
-                      weight_n <= 2'b00;
-                      if (next_w4addr[10]) begin
-                        w1_addr <= 10'h000;
-                        w2_addr <= 10'h000;
-                        w3_addr <= 10'h000;
-                        w4_addr <= 10'h000;
-                      end
-                    end
-                    default: ;
-                  endcase
-                end
+                //end
+                // else begin
+                //   case (weight_n)
+                //     2'b00: weight_n <= 2'b01;
+                //     2'b01: weight_n <= 2'b10;
+                //     2'b10: weight_n <= 2'b11;
+                //     2'b11: begin
+                //       weight_n <= 2'b00;
+                //       if (next_w4addr[10]) begin
+                //         w1_addr <= 10'h000;
+                //         w2_addr <= 10'h000;
+                //         w3_addr <= 10'h000;
+                //         w4_addr <= 10'h000;
+                //       end
+                //     end
+                //     default: ;
+                //   endcase
+                // end
               end 
             end
             else begin
@@ -1331,7 +1330,8 @@ module fc_module
         end
         STATE_SEND_RESULT: begin
           //max_index 가 0~9가 아닌 1~10을 출력해야함
-          m_axis_tdata <= tdata;
+          m_axis_tdata <= tdata; // tb test 용.
+
           if (|bias_size[1:0]) begin
             case (delay)
               2'b00: begin

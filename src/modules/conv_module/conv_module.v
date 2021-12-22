@@ -415,8 +415,8 @@ module conv_module
     output wire M_AXIS_TLAST, 
     output wire M_AXIS_TVALID, 
 
-    input wire conv_start, 
-    output wire conv_done,
+    input conv_start, 
+    output reg conv_done,
 
     //////////////////////////////////////////////////////////////////////////
     // TODO : Add ports if you need them
@@ -426,13 +426,8 @@ module conv_module
     input [5:0] Flen,
     output wire F_writedone,
     output wire B_writedone,
-    output wire RDY_TO_SEND,
-    output wire [3:0] STATE
+    output wire RDY_TO_SEND
   );
-
-  reg CONV_DONE;
-  assign conv_done = CONV_DONE;
-
   localparam STATE_IDLE = 4'd0,
   STATE_RECEIVE_FEATURE = 4'd1,  //BRAM 으로 receive
   STATE_RECEIVE_BIAS = 4'd2,
@@ -441,6 +436,8 @@ module conv_module
   STATE_COMPUTE = 4'd5,
   STATE_READ_FEAT = 4'd6,
   STATE_READ_WEIGHT =4'd11,
+  STATE_ADD_BIAS = 4'd7,
+  STATE_WRITE_RESULT = 4'd8,
   STATE_SEND_RESULT = 4'd9,
   STATE_WRITE_RBRAM = 4'd10,
   STATE_PREPARE_RESULT = 4'd12;
@@ -464,7 +461,6 @@ module conv_module
   // TODO : Write your code here
   ////////////////////////////////////////////////////////////////////////////
   reg [3:0] state;
-  assign STATE = state;
   reg f_receive_done, b_receive_done, w_receive_done, calc_all_done;
   reg pe_en, first;
   reg [11:0] f_addr;
@@ -477,17 +473,17 @@ module conv_module
   reg f_bram_en, w_bram_en, r_bram_en, f_we, w_we, r_we;
   wire [7:0] p1_a, p1_b;
   reg [1:0] read_delay;
-  reg [31:0] partial_result; 
+  reg [31:0] partial_result;
   wire [27:0] new_added, partial_data;
-  reg [271:0] feat_3[2:0]; 
+  reg [271:0] feat_3[2:0];
   reg [5:0] flen;
   reg [8:0] num_inch, num_outch;
   reg [71:0] feat;
   reg [255:0] feat_temp;
   reg [71:0] weight;
-  reg [287:0] weight_36; //
+  reg [287:0] weight_36;
   wire [27:0] pe_result_temp;
-  reg [7:0] bias; //
+  reg [7:0] bias;
   reg [1:0] cnt_3, cnt_4_filter;
   reg [2:0] cnt_tdata;
   reg [3:0] cnt_9;
@@ -608,7 +604,7 @@ module conv_module
       f_receive_done <= 1'b0;
       b_receive_done <= 1'b0;
       w_receive_done <= 1'b0;
-      CONV_DONE <= 1'b0;
+      conv_done <= 1'b0;
       calc_all_done <= 1'b0;
       pe_en <= 1'b0;
       first <= 1'b0;
@@ -625,13 +621,13 @@ module conv_module
       outch_cnt <= 9'h0;
       cnt_output <= 9'h0;
       s_axis_tready <= 1'b0;
+      // m_axis_tvalid <= 1'b0;
+      // m_axis_tlast <= 1'b0;
     end
     else begin
       case (state)
         STATE_IDLE: begin
-          m_axis_tlast <= 1'b0;
-          m_axis_tvalid <= 1'b0;
-          if (conv_start) begin
+          if (conv_start) begin            
             state <= STATE_RECEIVE_FEATURE;
             s_axis_tready <= 1'b1;
             f_bram_en <= 1'b1;
@@ -789,18 +785,18 @@ module conv_module
             m_axis_tvalid <= 1'b1;
             if (outch_cnt == num_OUTCH) begin
               calc_all_done <= 1'b1;
-              if (cnt_output == (flen * flen >> 2) - 1) begin
-                m_axis_tlast <= 1'b1;
-              end
+              if (cnt_output == (flen * flen >> 2) - 1) m_axis_tlast <= 1'b1;
             end
           end
         end
         STATE_SEND_RESULT: begin
-          if (cnt_output == (flen * flen >> 2) - 1) begin //weight 직육면체 하나에 대해서 계산 끝났을 때           
+          if (conv_done) begin
+            state <= STATE_IDLE;
+          end
+          else if (cnt_output == (flen * flen >> 2) - 1) begin //weight 직육면체 하나에 대해서 계산 끝났을 때           
             if (outch_cnt == num_OUTCH) begin
               outch_cnt <= 9'd0;    
-              CONV_DONE <= 1'b1;  
-              state <= STATE_IDLE;   
+              conv_done <= 1'b1;     
               m_axis_tvalid <= 1'b0;     
               m_axis_tlast <= 1'b0; 
             end
@@ -846,7 +842,7 @@ module conv_module
       cnt_32 <= 6'b0;
       cnt_3 <= 2'b0;
       cnt_tdata <= 3'b0;
-      weight_36 <= 288'h0;
+      //weight_36 <= 288'h0;
       go_read_weight <= 1'b0;
       tdata <= 32'h0;
       cnt_row <= 6'b0;
@@ -854,14 +850,13 @@ module conv_module
       cnt_ch <= 7'b0;
       cnt_filter <= 3'b0;
       read_feat_done <= 1'b0;
-      partial_result <= 32'h00000000;
-      feat_3[0] <= 272'h0;
-      feat_3[1] <= 272'h0;
-      feat_3[2] <= 272'h0;
-      feat <= 72'h0;
-      feat_temp <= 256'h0;
-      weight <= 72'h0;
-      flen <= 6'b0;
+      // partial_result <= 32'h00000000;
+      // feat_3[0] <= 272'h0;
+      // feat_3[1] <= 272'h0;
+      // feat_3[2] <= 272'h0;
+      // feat <= 72'h0;
+      // weight <= 72'h0;
+      // flen <= 6'b0;
     end
     else begin
       case (state)
